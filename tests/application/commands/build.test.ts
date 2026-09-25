@@ -1,8 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch } from '../../../src/application/dispatch';
 import { newWorld } from '../../support/helpers';
+import { MAP_POCKETS } from '../../support/maps';
 
 describe('build', () => {
+  it('[RM-03] refuse la construction quand elle fermerait le tronçon de la pierre 2 à la porte', () => {
+    const w = newWorld('normal', 42, MAP_POCKETS);
+    const towers = w.towers.length;
+
+    const r = dispatch(w, { c: 'build', def: 'wall', x: 10, y: 9 });
+
+    expect(r.ok).toBe(false);
+    expect(w.towers.length).toBe(towers);
+    expect(Number.isFinite(w.mazeLength())).toBe(true);
+  });
+
+  it('[RM-03] accepte la construction quand tous les tronçons restent ouverts', () => {
+    const w = newWorld('normal', 42, MAP_POCKETS);
+
+    const r = dispatch(w, { c: 'build', def: 'wall', x: 6, y: 6 });
+
+    expect(r.ok).toBe(true);
+  });
+
   it('allonge le trajet quand on construit un mur en travers', () => {
     const w = newWorld();
     const before = w.mazeLength();

@@ -36,8 +36,10 @@ export class World {
   readonly grid: Grid;
   readonly rng: Rng;
   readonly difficulty: Difficulty;
-  /** Un champ par tronçon : apparition → pierre runique, pierre runique → sortie. */
+  /** Un champ par tronçon : apparition → pierre 1 → … → dernière pierre → sortie. */
   readonly fields: FlowField[];
+  /** Cases cibles de chaque champ, dans le même ordre que `fields`. */
+  private readonly targets: number[][];
   readonly spawnCenter: { x: number; y: number };
   readonly waypoints: { x: number; y: number }[];
 
@@ -62,7 +64,7 @@ export class World {
   stats: Stats = { kills: 0, leaked: 0, goldEarned: 0, towersBuilt: 0, longestMaze: 0, towers: new Map(), waves: [] };
 
   /** Longueur restante estimée après chaque tronçon (pour le ciblage). */
-  legRest: number[] = [0, 0];
+  legRest: number[] = [];
   airRest: number[] = [0, 0];
   private nextId = 1;
   towerById = new Map<number, Tower>();
@@ -74,15 +76,18 @@ export class World {
     const d = DIFFICULTY[opts.difficulty];
     this.gold = d.gold;
     this.lives = d.lives;
-    this.fields = [
-      new FlowField(this.grid, this.grid.checkpointCells),
-      new FlowField(this.grid, this.grid.exitCells),
-    ];
+    const stones = this.grid.checkpoints.filter((s): s is number[] => !!s && s.length > 0);
+    this.targets = [...stones, this.grid.exitCells];
+    this.fields = this.targets.map((t) => new FlowField(this.grid, t));
+    this.legRest = new Array(this.fields.length).fill(0);
     this.spawnCenter = this.grid.regionCenter(this.grid.spawnCells);
-    this.waypoints = [this.grid.regionCenter(this.grid.checkpointCells), this.grid.regionCenter(this.grid.exitCells)];
-    const a = this.waypoints[0];
-    const b = this.waypoints[1];
-    this.airRest = [Math.hypot(a.x - b.x, a.y - b.y), 0];
+    this.waypoints = this.targets.map((t) => this.grid.regionCenter(t));
+    this.airRest = new Array(this.waypoints.length).fill(0);
+    for (let k = this.waypoints.length - 2; k >= 0; k--) {
+      const a = this.waypoints[k];
+      const b = this.waypoints[k + 1];
+      this.airRest[k] = this.airRest[k + 1] + Math.hypot(a.x - b.x, a.y - b.y);
+    }
     this.refreshPaths();
   }
 
@@ -102,14 +107,21 @@ export class World {
 
   refreshPaths(): void {
     for (const f of this.fields) f.compute();
-    this.legRest[0] = this.minDist(this.fields[1], this.grid.checkpointCells);
-    this.legRest[1] = 0;
+    const last = this.fields.length - 1;
+    this.legRest[last] = 0;
+    for (let k = last - 1; k >= 0; k--) {
+      this.legRest[k] = this.legRest[k + 1] + this.minDist(this.fields[k + 1], this.targets[k]);
+    }
     this.stats.longestMaze = Math.max(this.stats.longestMaze, this.mazeLength());
   }
 
-  /** Longueur du trajet terrestre complet, en cases. */
+  /** Longueur du trajet terrestre complet, en cases, calculée sur les champs courants. */
   mazeLength(): number {
-    return this.fields[0].dist[this.spawnCell] + this.legRest[0];
+    let len = this.fields[0].dist[this.spawnCell];
+    for (let k = 1; k < this.fields.length; k++) {
+      len += this.minDist(this.fields[k], this.targets[k - 1]);
+    }
+    return len;
   }
 
   minDist(field: FlowField, cells: number[]): number {
@@ -118,12 +130,16 @@ export class World {
     return m;
   }
 
-  /** Cases du trajet terrestre actuel (pour l'aperçu du chemin). */
+  /** Cases du trajet terrestre actuel (pour l'aperçu du chemin) : un tracé par tronçon. */
   groundRoute(): number[][] {
-    const leg0 = this.fields[0].trace(this.spawnCell);
-    const arrival = leg0[leg0.length - 1];
-    const leg1 = arrival !== undefined ? this.fields[1].trace(arrival) : [];
-    return [leg0, leg1];
+    const route: number[][] = [];
+    let from: number | undefined = this.spawnCell;
+    for (const f of this.fields) {
+      const leg: number[] = from !== undefined ? f.trace(from) : [];
+      route.push(leg);
+      from = leg[leg.length - 1];
+    }
+    return route;
   }
 
   emit(e: GameEvent): void {

@@ -29,11 +29,13 @@ export function canBuild(world: World, defId: string, x: number, y: number): Res
 }
 
 function pathsStayOpen(world: World, blocked: Set<number>): boolean {
-  const [f0, f1] = world.fields;
-  f0.compute(blocked);
-  f1.compute(blocked);
+  const fields = world.fields;
+  for (const f of fields) f.compute(blocked);
   const g = world.grid;
-  let ok = f0.reachable(world.spawnCell) && g.checkpointCells.some((i) => f1.reachable(i));
+  let ok = fields[0].reachable(world.spawnCell);
+  for (let k = 0; ok && k < g.checkpoints.length; k++) {
+    ok = g.checkpoints[k].some((i) => fields[k + 1].reachable(i));
+  }
   if (ok) {
     for (const c of world.creeps) {
       if (!c.alive || c.def.air) continue;

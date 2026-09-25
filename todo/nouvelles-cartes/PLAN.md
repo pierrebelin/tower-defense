@@ -6,9 +6,9 @@
 
 | Lot | Intention | RM/CU | Dépend de | État |
 |-----|-----------|-------|-----------|------|
-| F1 | Le moteur gère un nombre quelconque de pierres runiques, touchées dans l'ordre. | RM-01, RM-02, RM-03, RM-04, RM-07 / CU-02 | — | ⬜ |
-| F2 | « La Spirale » et « Les Deux Sceaux » rejoignent le catalogue, jouables et aux règles communes. | RM-05, RM-08 / CU-02 | F1 | ⬜ |
-| F3 | L'écran titre propose la carte et mémorise un record par carte et difficulté. | RM-06, RM-07 / CU-01 | F2 | ⬜ |
+| F1 | Le moteur gère un nombre quelconque de pierres runiques, touchées dans l'ordre. | RM-01, RM-02, RM-03, RM-04, RM-07 / CU-02 | — | ✅ |
+| F2 | « La Spirale » et « Les Deux Sceaux » rejoignent le catalogue, jouables et aux règles communes. | RM-05, RM-08 / CU-02 | F1 | ✅ (hors `debrief`, rouge préexistant) |
+| F3 | L'écran titre propose la carte et mémorise un record par carte et difficulté. | RM-06, RM-07 / CU-01 | F2 | ⏳ `/verify-tdd` : ÉCARTS en attente de décision (H2, H4) |
 
 ## Périmètre
 
@@ -47,7 +47,7 @@
 
 ---
 
-## Lot F1 — Trajet à plusieurs pierres runiques — ⬜
+## Lot F1 — Trajet à plusieurs pierres runiques — ✅
 
 ### Intention
 Une carte déclare 1 à n pierres ; créatures, volants, anti-blocage et aperçu suivent tous les tronçons dans l'ordre. **RM** : RM-01, RM-02, RM-03, RM-04, RM-07 · **CU** : CU-02
@@ -66,7 +66,7 @@ Tests écrits et **rouges avant toute ligne de production** de l'étape. Ordre :
 
 Cartes de test dans `tests/support/maps.ts` (nouveau, partagé) : `MAP_CORRIDOR` — couloir `E S 2 1` de gauche à droite, la pierre 2 est sur le chemin de la pierre 1 ; `MAP_TWO_STONES` — champ ouvert à deux pierres avec goulets construisibles pour fermer un tronçon précis. `newWorld(difficulty, seed, map = MAP_CROSSING)`.
 
-#### Étape 1 — Les créatures terrestres touchent les pierres dans l'ordre — ⬜
+#### Étape 1 — Les créatures terrestres touchent les pierres dans l'ordre — ✅
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[RM-01] fait passer une créature terrestre par la pierre 1 puis la pierre 2 avant la sortie` | `tests/domain/model/World.test.ts` | RM-01 |
@@ -78,7 +78,7 @@ Non-régression : `fait passer les créatures par la pierre runique avant la sor
 
 **Production autorisée** : `src/domain/model/types.ts`, `src/domain/model/Grid.ts`, `src/domain/model/World.ts` (`fields`, `legRest`, `refreshPaths`, `mazeLength`, `groundRoute`), `src/domain/systems/movement.ts` (`advanceLeg`), `src/domain/catalog/map.ts` (légende), `src/infrastructure/render/Renderer.ts` (usages de `checkpointCells`), `tests/support/helpers.ts`, `tests/support/maps.ts`.
 
-#### Étape 2 — Les volants survolent chaque pierre dans l'ordre — ⬜
+#### Étape 2 — Les volants survolent chaque pierre dans l'ordre — ✅
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[RM-02] fait survoler au volant la pierre 1 puis la pierre 2 avant la porte` | `tests/domain/model/World.test.ts` | RM-02 |
@@ -86,7 +86,7 @@ Non-régression : `fait passer les créatures par la pierre runique avant la sor
 
 **Production autorisée** : `src/domain/model/World.ts` (`waypoints`, `airRest`).
 
-#### Étape 3 — Aucune construction ne ferme un tronçon — ⬜
+#### Étape 3 — Aucune construction ne ferme un tronçon — ✅
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[RM-03] refuse la construction quand elle fermerait le tronçon de la pierre 2 à la porte` | `tests/application/commands/build.test.ts` | RM-03 |
@@ -96,7 +96,7 @@ Non-régression : `fait passer les créatures par la pierre runique avant la sor
 
 **Production autorisée** : `src/application/queries/canBuild.ts` (`pathsStayOpen`).
 
-#### Étape 4 — L'aperçu montre le trajet complet — ⬜
+#### Étape 4 — L'aperçu montre le trajet complet — ✅
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[RM-04] renvoie trois tronçons enchaînés du portail à la porte quand la carte a deux pierres` | `tests/application/queries/previewRoute.test.ts` (nouveau) | RM-04 |
@@ -105,7 +105,7 @@ Non-régression : `fait passer les créatures par la pierre runique avant la sor
 
 **Production autorisée** : `src/application/queries/previewRoute.ts`, `src/infrastructure/render/Renderer.ts` (`drawLandmarks` : une pierre dessinée par entrée de `checkpoints`, numéro affiché quand il y en a plusieurs — vérifié à l'œil), `src/presentation/Game.ts` (texte d'accueil « les pierres runiques, dans l'ordre »).
 
-#### Étape 5 — Vérification — ⬜
+#### Étape 5 — Vérification — ✅ (hors `debrief.test.ts`, rouge préexistant depuis `a5e3d8c`, lot bilan-de-partie)
 Pas de nouveau test. `npx tsc --noEmit` + `npm test` (`balance.test.ts` doit rester vert : Gué des Runes inchangé).
 
 ### Éléments de code
@@ -122,11 +122,12 @@ Signatures seulement, jamais de corps.
 - `tests/support/helpers.ts` — `newWorld(difficulty?: Difficulty, seed?: number, map?: MapDef): World`.
 
 ### Hypothèses
-_Vide à l'écriture. Rempli par `/implement-tdd` : `Hn — [hypothèse] — à valider par [qui]`._
+- H1 — Étape 3, tests 2 (`fermerait le tronçon de la pierre 1 à la pierre 2`) et 3 (`enfermerait une créature en route vers la pierre 2`) non écrits : verts au premier passage, comportement déjà couvert par `pathsStayOpen` (tronçon 1 vérifié explicitement, créatures via `fields[c.leg]`). Test 4 (acceptation) gardé bien que vert : garde-fou contre un refus excessif après généralisation. Carte `MAP_POCKETS` ajoutée dans `tests/support/maps.ts` (goulets 2×2) au lieu de modifier `MAP_TWO_STONES` — à valider par Pierre.
+- H2 — Étape 4, test 3 (`laisse le labyrinthe inchangé après l'aperçu`) vert au premier passage (`refreshPaths` restaure déjà tous les champs) mais gardé : aucun autre test ne couvre la restauration après `previewRoute`, garde-fou pour la réécriture de la query — à valider par Pierre.
 
 ---
 
-## Lot F2 — La Spirale et Les Deux Sceaux — ⬜
+## Lot F2 — La Spirale et Les Deux Sceaux — ✅
 
 ### Intention
 Deux cartes de plus au catalogue, jouables sans tour, avec les mêmes règles que le Gué des Runes. **RM** : RM-05, RM-08 · **CU** : CU-02
@@ -142,18 +143,18 @@ Deux cartes de plus au catalogue, jouables sans tour, avec les mêmes règles qu
 
 ### Étapes et tests
 
-#### Étape 1 — Chaque carte du catalogue est jouable — ⬜
+#### Étape 1 — Chaque carte du catalogue est jouable — ✅
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[RM-05] trouve un chemin pour chaque tronçon quand la carte n'a aucune tour` (pour chaque carte de `MAPS`) | `tests/domain/catalog/map.test.ts` (nouveau) | RM-05 |
 | 2 | `[RM-05] rend non constructibles le portail, les pierres et la porte` (pour chaque carte) | idem | RM-05 |
 | 3 | `[RM-05] numérote les pierres sans trou à partir de 1` (pour chaque carte) | idem | RM-05 |
-| 4 | `propose Le Gué des Runes, La Spirale et Les Deux Sceaux aux tailles et nombres de pierres prévus` | idem | RM-05 |
+| 4 | `[RM-05] propose Le Gué des Runes, La Spirale et Les Deux Sceaux aux tailles et nombres de pierres prévus` | idem | RM-05 |
 | 5 | `[CU-02] fait sortir une créature des Deux Sceaux après la pierre 1 puis la pierre 2` | idem | CU-02 |
 
 **Production autorisée** : `src/domain/model/types.ts` (`MapDef.id`), `src/domain/catalog/map.ts` (`MAP_SPIRAL`, `MAP_SEALS`, `MAPS`, `id` du Gué).
 
-#### Étape 2 — Les règles sont les mêmes sur toutes les cartes — ⬜
+#### Étape 2 — Les règles sont les mêmes sur toutes les cartes — ✅ (vert au premier passage, attendu)
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[RM-08] démarre avec le même or et les mêmes vies sur chaque carte quand la difficulté est la même` | `tests/domain/catalog/map.test.ts` | RM-08 |
@@ -161,7 +162,7 @@ Deux cartes de plus au catalogue, jouables sans tour, avec les mêmes règles qu
 
 **Production autorisée** : aucune attendue (comportement existant) ; si rouge, `src/domain/model/World.ts` seulement.
 
-#### Étape 3 — Vérification — ⬜
+#### Étape 3 — Vérification — ✅ (hors `debrief.test.ts`, rouge préexistant depuis `a5e3d8c`)
 Pas de nouveau test. `npx tsc --noEmit` + `npm test` (`balance.test.ts` n'est joué que sur le Gué des Runes, H1 de la spec).
 
 ### Éléments de code
@@ -171,11 +172,13 @@ Signatures seulement, jamais de corps.
 - `domain/catalog/map.ts` — `export const MAPS: MapDef[]` — `[MAP_CROSSING, MAP_SPIRAL, MAP_SEALS]`.
 
 ### Hypothèses
-_Vide à l'écriture. Rempli par `/implement-tdd` : `Hn — [hypothèse] — à valider par [qui]`._
+- H1 — Étape 2 : les deux tests RM-08 sont verts au premier passage (`gold`/`lives` lus dans `DIFFICULTY`, vagues dans `WAVES`, jamais sur la carte), conformément au plan. Gardés : seule couverture de l'invariance sur les trois cartes, garde-fou contre un branchement futur sur la carte — à valider par Pierre.
+- H2 — Étape 1 : dispositions de `MAP_SPIRAL` et `MAP_SEALS` volontairement sobres (zones 3×4 ou 3×3 calquées sur le Gué, quelques rochers) ; réglage fin en jouant sous RM-05 — à valider par Pierre.
+- H3 — Étape 3 : vérification faite hors `debrief.test.ts` (8 tests rouges et erreurs `tsc` dans `debrief.ts`, préexistants depuis `a5e3d8c`, lot `todo/bilan-de-partie`) ; F2 n'y touche pas et ne les corrige pas — à valider par Pierre.
 
 ---
 
-## Lot F3 — Choix de carte et records — ⬜
+## Lot F3 — Choix de carte et records — ⏳
 
 ### Intention
 L'écran titre fait choisir carte et difficulté, affiche le record de chaque couple et démarre sur la carte choisie. **RM** : RM-06, RM-07 · **CU** : CU-01
@@ -191,7 +194,7 @@ L'écran titre fait choisir carte et difficulté, affiche le record de chaque co
 
 ### Étapes et tests
 
-#### Étape 1 — Un record par carte et difficulté, anciens records conservés — ⬜
+#### Étape 1 — Un record par carte et difficulté, anciens records conservés — ✅
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[RM-06] garde le meilleur résultat séparément pour chaque carte et difficulté` | `tests/domain/rules/records.test.ts` (nouveau) | RM-06 |
@@ -201,7 +204,7 @@ L'écran titre fait choisir carte et difficulté, affiche le record de chaque co
 
 **Production autorisée** : `src/domain/rules/records.ts` (nouveau, calqué sur `pricing.ts`), `src/presentation/Game.ts` (`BEST_KEY` v2, `loadBest`, `saveBest` avec l'id de la carte jouée).
 
-#### Étape 2 — Le joueur choisit sa carte à l'écran titre — ⬜
+#### Étape 2 — Le joueur choisit sa carte à l'écran titre — ✅ (test 1 non écrit, H2)
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[CU-01] présélectionne Le Gué des Runes quand le joueur n'a rien choisi` | `tests/domain/catalog/map.test.ts` | CU-01 |
@@ -211,7 +214,7 @@ L'écran titre fait choisir carte et difficulté, affiche le record de chaque co
 
 **Production autorisée** : `src/presentation/Game.ts` (`mapId`, `createWorld(map, d)`, `newGame`, `showStart`), `src/infrastructure/render/sprites.ts` (`drawMapThumbnail`), `index.html` (style des cartes, calqué sur `.diff`).
 
-#### Étape 3 — Vérification — ⬜
+#### Étape 3 — Vérification — ✅ (hors `debrief.test.ts`, rouge préexistant depuis `a5e3d8c`, H4)
 Pas de nouveau test. `npx tsc --noEmit` + `npm test`.
 
 ### Éléments de code
@@ -223,4 +226,7 @@ Signatures seulement, jamais de corps.
 - `presentation/Game.ts` — `private createWorld(map: MapDef, d: Difficulty): World` ; `private mapId: string` (défaut `MAPS[0].id`).
 
 ### Hypothèses
-_Vide à l'écriture. Rempli par `/implement-tdd` : `Hn — [hypothèse] — à valider par [qui]`._
+- H1 — Étape 2, test 2 (`[RM-07] démarre la partie sur la carte passée en paramètre`) vert au premier passage (`WorldOptions.map` existant) mais gardé : seule assertion directe que la géométrie de la partie vient de la carte passée — à valider par Pierre.
+- H2 — Étape 2, test 1 (`[CU-01] présélectionne Le Gué des Runes…`) non écrit : déjà couvert par `[RM-05] propose Le Gué des Runes, La Spirale et Les Deux Sceaux…` (`tests/domain/catalog/map.test.ts:38-39`, ordre de `MAPS`) ; la présélection elle-même (`Game.mapId = MAPS[0].id`) relève de `presentation`, vérifiée à l'œil — à valider par Pierre.
+- H3 — Étape 2 : `saveBest` enregistre sous `Game.mapId` (carte sélectionnée à l'écran titre) plutôt que sous une carte lue dans `World` ; équivalent tant que la carte ne se choisit qu'avant la partie (confirmé par `/verify-tdd` : l'écran titre ne se ferme que par « Commencer ») — à valider par Pierre.
+- H4 — Étape 3 : vérification faite hors `debrief.test.ts` (8 tests rouges, 14 erreurs `tsc` dans `debrief.ts`/`debrief.test.ts`, préexistants depuis `a5e3d8c`, lot `todo/bilan-de-partie`) ; F3 n'y touche pas. `/verify-tdd` rend `ÉCARTS` pour cette seule raison et pour H2 — clôture « hors debrief » comme F1/F2, ou fin du lot bilan-de-partie d'abord : à trancher par Pierre.
