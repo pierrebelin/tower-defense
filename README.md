@@ -38,26 +38,33 @@ prévisualiser, second appui au même endroit pour bâtir.
 
 ## Architecture
 
+Clean architecture en quatre couches ; le sens des dépendances est vérifié par
+`tests/architecture.test.ts`.
+
 ```
 src/
-  core/        GameLoop (pas fixe 1/60 s), Rng (mulberry32, graine)
-  data/        towers.ts, creeps.ts (+ vagues, difficultés), map.ts (carte en ASCII)
-  sim/         ← aucune dépendance au DOM, testée sous Node
-    World.ts       état complet + step() + dispatch(commande)
-    Grid.ts        terrain et occupation
-    FlowField.ts   Dijkstra 8 directions par tronçon (portail → rune → porte)
-    commands.ts    build / upgrade / sell / target / callWave, validation anti-blocage
-    Damage.ts      table attaque/armure, formule d'armure
+  domain/          ← cœur du jeu, aucune dépendance (ni DOM, ni autre couche)
+    model/         World (état complet + step()), Grid (terrain, occupation), types
+    rules/         Damage (table attaque/armure), FlowField (Dijkstra 8 directions
+                   par tronçon), pricing (coûts, remboursements)
     systems/       waves, movement, combat (+ projectiles, chaînes), status (poison, lenteur…)
-  render/      Renderer (Canvas 2D), sprites procéduraux, Effects (particules, textes)
-  audio/       Sfx : sons synthétisés en Web Audio, aucun fichier
-  ui/          Game : entrées, panneau de commandes 4×3, HUD, écrans ; describe.ts : textes
-tests/         sim.test.ts, balance.test.ts (bot), bot.ts
+    catalog/       towers, creeps (+ vagues, difficultés), map (carte en ASCII)
+    Rng.ts         mulberry32, graine
+  application/     ← ordres du joueur, dépend de domain
+    dispatch.ts    seule porte d'entrée des commandes, journal de rejeu
+    commands/      build, upgrade, sell, target, callWave
+    queries/       canBuild (validation anti-blocage), previewRoute
+  infrastructure/  ← adaptateurs techniques, dépend de domain
+    render/        Renderer (Canvas 2D), sprites procéduraux, Effects (particules, textes)
+    audio/         Sfx : sons synthétisés en Web Audio, aucun fichier
+    GameLoop.ts    requestAnimationFrame à pas fixe 1/60 s
+  presentation/    Game : entrées, panneau de commandes 4×3, HUD, écrans ; describe.ts : textes
+tests/             même arborescence que src/ ; architecture, balance (bot), support/
 ```
 
 Les choix qui comptent :
 
-- **Simulation pure et déterministe.** `World` n'est modifié que par `dispatch(commande)`
+- **Simulation pure et déterministe.** `World` n'est modifié que par `dispatch(world, commande)`
   et `step()`. Même graine + même journal de commandes = même partie, ce que vérifie un
   test de rejeu. C'est la base d'un replay, d'un mode spectateur ou d'un multijoueur en
   *lockstep* comme celui de Warcraft III. Côté architecture, c'est un modèle

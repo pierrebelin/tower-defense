@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { newWorld } from './helpers';
-import { playBot } from './bot';
+import { newWorld } from './support/helpers';
+import { playBot } from './support/bot';
 
 // Un joueur automatique volontairement simple (labyrinthe fixe, aucune
 // adaptation aux vagues) : il sert de plancher de difficulté.

@@ -1,0 +1,56 @@
+import type { Family } from '../../domain/model/types';
+
+// Palette du monde : lande humide, pierre grise, bronze et or terni.
+export const PAL = {
+  grassA: '#3a4d2c',
+  grassB: '#34462a',
+  grassC: '#435733',
+  tuft: '#51683b',
+  dirt: '#6a5639',
+  dirtDark: '#57462d',
+  rock: '#77705f',
+  rockDark: '#4b463c',
+  rockLight: '#9c947f',
+  cliff: '#2a2721',
+  stone: '#8d8471',
+  stoneDark: '#5b5446',
+  stoneLight: '#b7ad95',
+  bronze: '#b98d4c',
+  gold: '#e9b949',
+  parchment: '#efe3c4',
+  ink: '#1b1712',
+  danger: '#d8553f',
+  good: '#8cc464',
+  shadow: 'rgba(10, 8, 5, 0.35)',
+};
+
+export const FAMILY_COLOR: Record<Family, { main: string; dark: string; glow: string }> = {
+  wall: { main: '#8d8471', dark: '#5b5446', glow: '#c9bfa6' },
+  archer: { main: '#a8743f', dark: '#6b4524', glow: '#e3c07a' },
+  cannon: { main: '#4a4a4f', dark: '#262629', glow: '#f09a4a' },
+  frost: { main: '#8fd3f2', dark: '#3c7fa6', glow: '#d8f3ff' },
+  storm: { main: '#a98cf0', dark: '#5a3fa8', glow: '#e7dcff' },
+  venom: { main: '#98c94a', dark: '#4d7322', glow: '#d6f59a' },
+};
+
+export interface CreepStyle {
+  body: string;
+  dark: string;
+  eye: string;
+  shape: 'round' | 'block' | 'wing' | 'ghost';
+}
+
+export const CREEP_STYLE: Record<string, CreepStyle> = {
+  rat: { body: '#8c7b64', dark: '#5a4b3a', eye: '#f2d36b', shape: 'round' },
+  wolf: { body: '#9da3a8', dark: '#5f656b', eye: '#f7e27a', shape: 'round' },
+  raider: { body: '#b5713c', dark: '#6e3f1c', eye: '#ffd9a8', shape: 'round' },
+  troll: { body: '#6c9a5b', dark: '#3c5e31', eye: '#ffe066', shape: 'round' },
+  golem: { body: '#948b7b', dark: '#5c5548', eye: '#7fe0ff', shape: 'block' },
+  knight: { body: '#7888a0', dark: '#3f4a5c', eye: '#ff7a5a', shape: 'block' },
+  harpy: { body: '#c7829f', dark: '#7c4660', eye: '#fff0a0', shape: 'wing' },
+  wyvern: { body: '#6f9a63', dark: '#3d5c35', eye: '#ffcf4a', shape: 'wing' },
+  wraith: { body: '#b9d6e2', dark: '#6c8b99', eye: '#e8fbff', shape: 'ghost' },
+  ogre: { body: '#9a643c', dark: '#5a3620', eye: '#ffd24a', shape: 'round' },
+  hydra: { body: '#3f8a66', dark: '#1f4d38', eye: '#ffe36b', shape: 'round' },
+  ashlord: { body: '#b9492f', dark: '#5e1f14', eye: '#ffcf6b', shape: 'block' },
+};

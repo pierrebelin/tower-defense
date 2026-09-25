@@ -1,0 +1,85 @@
+import type { World } from '../model/World';
+import type { Creep } from '../model/types';
+
+export function updateMovement(world: World, dt: number): void {
+  for (const c of world.creeps) {
+    if (!c.alive) continue;
+    const speed = c.def.speed * (1 - c.slowPct);
+    if (c.def.air) moveAir(world, c, speed * dt);
+    else moveGround(world, c, speed * dt);
+  }
+}
+
+function moveAir(world: World, c: Creep, budget: number): void {
+  while (budget > 0 && c.alive) {
+    const wp = world.waypoints[c.leg];
+    const dx = wp.x - c.x;
+    const dy = wp.y - c.y;
+    const d = Math.hypot(dx, dy);
+    if (d <= budget) {
+      c.x = wp.x;
+      c.y = wp.y;
+      budget -= d;
+      if (!advanceLeg(world, c)) return;
+    } else {
+      c.x += (dx / d) * budget;
+      c.y += (dy / d) * budget;
+      budget = 0;
+    }
+  }
+  const wp = world.waypoints[c.leg];
+  c.remaining = Math.hypot(wp.x - c.x, wp.y - c.y) + world.airRest[c.leg];
+}
+
+function moveGround(world: World, c: Creep, budget: number): void {
+  const g = world.grid;
+  let guard = 8;
+  while (budget > 0 && c.alive && guard-- > 0) {
+    const txc = c.tx + 0.5;
+    const tyc = c.ty + 0.5;
+    const dx = txc - c.x;
+    const dy = tyc - c.y;
+    const d = Math.hypot(dx, dy);
+    if (d <= budget) {
+      c.x = txc;
+      c.y = tyc;
+      budget -= d;
+      const cell = g.idx(c.tx, c.ty);
+      const field = world.fields[c.leg];
+      if (field.dist[cell] === 0) {
+        if (!advanceLeg(world, c)) return;
+        continue;
+      }
+      const nxt = field.next[cell];
+      if (nxt < 0) return; // Aucun chemin : impossible en jeu normal (constructions validées).
+      c.tx = g.cx(nxt);
+      c.ty = g.cy(nxt);
+    } else {
+      c.x += (dx / d) * budget;
+      c.y += (dy / d) * budget;
+      budget = 0;
+    }
+  }
+  const field = world.fields[c.leg];
+  const cell = g.idx(c.tx, c.ty);
+  c.remaining = field.dist[cell] + Math.hypot(c.tx + 0.5 - c.x, c.ty + 0.5 - c.y) + world.legRest[c.leg];
+}
+
+/** Passe au tronçon suivant ; renvoie false si la créature a atteint la sortie. */
+function advanceLeg(world: World, c: Creep): boolean {
+  if (c.leg === 0) {
+    c.leg = 1;
+    return true;
+  }
+  c.alive = false;
+  world.lives -= c.def.leak;
+  world.stats.leaked++;
+  world.creepGone(c);
+  world.emit({ t: 'leak', lives: c.def.leak, boss: !!c.def.boss });
+  if (world.lives <= 0 && world.phase !== 'defeat') {
+    world.lives = 0;
+    world.phase = 'defeat';
+    world.emit({ t: 'defeat' });
+  }
+  return false;
+}
