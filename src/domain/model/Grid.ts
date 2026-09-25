@@ -1,8 +1,9 @@
 import type { CellKind, MapDef } from './types';
 
 const KIND: Record<string, CellKind> = {
-  '.': 'build', '#': 'rock', S: 'spawn', '1': 'checkpoint', E: 'exit', '~': 'road',
+  '.': 'build', '#': 'rock', S: 'spawn', E: 'exit', '~': 'road',
 };
+const STONE = /^[1-9]$/;
 
 /** Grille logique : nature du terrain et occupation par les tours (2×2 cases). */
 export class Grid {
@@ -12,7 +13,8 @@ export class Grid {
   /** Identifiant de la tour occupant la case, 0 si libre. */
   readonly tower: Int32Array;
   readonly spawnCells: number[] = [];
-  readonly checkpointCells: number[] = [];
+  /** Pierres runiques dans l'ordre de traversée : `checkpoints[n - 1]` pour le chiffre `n`. */
+  readonly checkpoints: number[][] = [];
   readonly exitCells: number[] = [];
 
   constructor(map: MapDef) {
@@ -24,12 +26,16 @@ export class Grid {
     map.rows.forEach((row, y) => {
       if (row.length !== map.width) throw new Error(`Ligne ${y} : largeur ${row.length} ≠ ${map.width}`);
       [...row].forEach((ch, x) => {
-        const k = KIND[ch];
+        const stone = STONE.test(ch);
+        const k = stone ? 'checkpoint' : KIND[ch];
         if (!k) throw new Error(`Caractère de carte inconnu « ${ch} »`);
         const i = this.idx(x, y);
         this.kind[i] = k;
         if (k === 'spawn') this.spawnCells.push(i);
-        if (k === 'checkpoint') this.checkpointCells.push(i);
+        if (stone) {
+          const n = Number(ch) - 1;
+          (this.checkpoints[n] ??= []).push(i);
+        }
         if (k === 'exit') this.exitCells.push(i);
       });
     });

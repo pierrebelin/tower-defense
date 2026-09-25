@@ -1,4 +1,5 @@
-import type { CreepDef, TowerDef } from '../../domain/model/types';
+import type { CellKind, CreepDef, MapDef, TowerDef } from '../../domain/model/types';
+import { Grid } from '../../domain/model/Grid';
 import { CREEP_STYLE, FAMILY_COLOR, PAL } from './palette';
 
 // Dessins vectoriels procéduraux. Le contexte est déjà mis à l'échelle :
@@ -734,6 +735,29 @@ export const TOWER_ART: Record<string, (p: Pose) => void> = {
     disc(p.ctx, p.cx, p.top, 0.08, PAL.gold);
   },
 };
+
+const CELL_COLOR: Record<CellKind, string> = {
+  build: PAL.grassA,
+  rock: PAL.rock,
+  spawn: PAL.good,
+  checkpoint: PAL.gold,
+  exit: PAL.danger,
+  road: PAL.dirt,
+};
+
+/** Vignette de carte : une couleur par nature de case, mise à l'échelle dans un carré `size` px. */
+export function drawMapThumbnail(ctx: Ctx, map: MapDef, size: number): void {
+  const grid = new Grid(map);
+  const cell = size / Math.max(grid.w, grid.h);
+  const ox = (size - grid.w * cell) / 2;
+  const oy = (size - grid.h * cell) / 2;
+  for (let y = 0; y < grid.h; y++) {
+    for (let x = 0; x < grid.w; x++) {
+      ctx.fillStyle = CELL_COLOR[grid.kind[grid.idx(x, y)]];
+      ctx.fillRect(ox + x * cell, oy + y * cell, cell + 0.4, cell + 0.4);
+    }
+  }
+}
 
 export function drawTower(ctx: Ctx, def: TowerDef, cx: number, cy: number, aim: number, time: number): void {
   const art = TOWER_ART[def.id];

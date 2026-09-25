@@ -73,6 +73,7 @@ export interface WaveDef {
 export type CellKind = 'build' | 'rock' | 'spawn' | 'checkpoint' | 'exit' | 'road';
 
 export interface MapDef {
+  id: string;
   name: string;
   width: number;
   height: number;

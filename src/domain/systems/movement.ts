@@ -67,8 +67,8 @@ function moveGround(world: World, c: Creep, budget: number): void {
 
 /** Passe au tronçon suivant ; renvoie false si la créature a atteint la sortie. */
 function advanceLeg(world: World, c: Creep): boolean {
-  if (c.leg === 0) {
-    c.leg = 1;
+  if (c.leg < world.fields.length - 1) {
+    c.leg++;
     return true;
   }
   c.alive = false;
