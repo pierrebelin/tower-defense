@@ -138,7 +138,7 @@ export function applyDamage(world: World, c: Creep, raw: number, type: AttackTyp
   if (dmg <= 0) return 0;
   c.hp -= dmg;
   if (!ignoreArmorValue) c.hitFlash = 0.08;
-  const tower = world.towerById.get(towerId);
+  const tower = world.stats.towers.get(towerId);
   if (tower) tower.damage += Math.min(dmg, dmg + c.hp);
   if (c.hp <= 0) {
     c.alive = false;

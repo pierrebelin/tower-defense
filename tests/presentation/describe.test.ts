@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { AttackDef } from '../../src/domain/model/types';
+import type { AttackDef, Tower } from '../../src/domain/model/types';
 import { applyOnHit } from '../../src/domain/systems/status';
 import { spawnCreep } from '../../src/domain/systems/waves';
 import type { TowerDef } from '../../src/domain/model/types';
-import { creepEffects, elementsLabel, fmt1, towerInfo, towerSpecials } from '../../src/presentation/describe';
+import {
+  creepEffects, debriefBreakers, debriefFamilies, debriefTowers, debriefWaves,
+  elementsLabel, FAMILY_LABEL, fmt0, fmt1, towerInfo, towerSpecials,
+} from '../../src/presentation/describe';
 import { infusionBlocker } from '../../src/domain/rules/infusion';
 import { TOWERS } from '../../src/domain/catalog/towers';
+import { familyDamage, towerRanking, towerYield } from '../../src/domain/rules/debrief';
 import { newWorld } from '../support/helpers';
 
 const attack = (extra: Partial<AttackDef>): AttackDef => ({
@@ -71,6 +75,92 @@ describe('fiche d’une tour hybride', () => {
 
     const noElements = towerDef({});
     expect(elementsLabel(noElements)).toBe('');
+  });
+});
+
+const towerFixture = (extra: Partial<Tower>): Tower => ({
+  id: 1, def: TOWERS.archer, x: 0, y: 0, cx: 0, cy: 0, cooldown: 0,
+  targetMode: 'first', spent: 0, kills: 0, damage: 0, aim: 0, fate: 'standing', ...extra,
+});
+
+describe('bilan de partie', () => {
+  it('[RM-01] liste chaque tour avec nom, état, dégâts, éliminations, or investi et rendement', () => {
+    const strong = towerFixture({ id: 1, def: TOWERS.archer, damage: 500, kills: 10, spent: 100, fate: 'standing' });
+    const weak = towerFixture({ id: 2, def: TOWERS.cannon, damage: 200, kills: 5, spent: 50, fate: 'sold' });
+
+    const html = debriefTowers(towerRanking([strong, weak]));
+
+    expect(html).toContain(strong.def.name);
+    expect(html).toContain('En place');
+    expect(html).toContain(fmt0(strong.damage));
+    expect(html).toContain(fmt0(strong.kills));
+    expect(html).toContain(fmt0(strong.spent));
+    expect(html).toContain(fmt1(towerYield(strong)));
+
+    expect(html).toContain(weak.def.name);
+    expect(html).toContain('Vendue');
+    expect(html).toContain(fmt0(weak.damage));
+    expect(html).toContain(fmt0(weak.kills));
+    expect(html).toContain(fmt0(weak.spent));
+    expect(html).toContain(fmt1(towerYield(weak)));
+
+    expect(html.indexOf(strong.def.name)).toBeLessThan(html.indexOf(weak.def.name));
+  });
+
+  it('[RM-03] affiche chaque famille avec son libellé, ses dégâts et sa part en pourcentage, hybrides compris', () => {
+    const hybrid = towerFixture({ id: 1, def: TOWERS.stinger, damage: 300 });
+    const simple = towerFixture({ id: 2, def: TOWERS.frost, damage: 100 });
+
+    const html = debriefFamilies(familyDamage([hybrid, simple]));
+
+    expect(html).toContain('Hybrides');
+    expect(html).toContain(FAMILY_LABEL.frost);
+    expect(html).toContain(fmt0(300));
+    expect(html).toContain(fmt0(100));
+    expect(html).toContain(`${fmt0(75)} %`);
+    expect(html).toContain(`${fmt0(25)} %`);
+  });
+
+  it('[RM-04] affiche chaque vague avec ses vies perdues et son or', () => {
+    const html = debriefWaves([
+      { wave: 0, livesLost: 2, gold: 120 },
+      { wave: 1, livesLost: 3, gold: 95 },
+    ]);
+
+    const wave1 = html.indexOf('Vague 1');
+    const lives1 = html.indexOf(fmt0(2));
+    const gold1 = html.indexOf(fmt0(120));
+    const wave2 = html.indexOf('Vague 2');
+    const lives2 = html.indexOf(fmt0(3));
+    const gold2 = html.indexOf(fmt0(95));
+
+    expect(wave1).toBeGreaterThanOrEqual(0);
+    expect(wave1).toBeLessThan(lives1);
+    expect(lives1).toBeLessThan(gold1);
+    expect(gold1).toBeLessThan(wave2);
+    expect(wave2).toBeLessThan(lives2);
+    expect(lives2).toBeLessThan(gold2);
+  });
+
+  it('[RM-05] affiche le nombre de tours détruites et l’or qu’elles représentaient', () => {
+    const html = debriefBreakers({ count: 2, gold: 350 });
+
+    expect(html).toContain('2 tours détruites');
+    expect(html).toContain('350 or');
+    expect(html).not.toContain('Aucune tour perdue');
+  });
+
+  it('[RM-05] affiche « Aucune tour perdue » quand aucune tour n’a été détruite', () => {
+    const html = debriefBreakers({ count: 0, gold: 0 });
+
+    expect(html).toContain('Aucune tour perdue');
+  });
+
+  it('[RM-05] accorde au singulier quand une seule tour a été détruite', () => {
+    const html = debriefBreakers({ count: 1, gold: 120 });
+
+    expect(html).toContain('1 tour détruite');
+    expect(html).not.toContain('tours');
   });
 });
 

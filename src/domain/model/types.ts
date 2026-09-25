@@ -63,6 +63,11 @@ export interface CreepDef {
   bountyFactor: number;
 }
 
+export interface WaveTally {
+  livesLost: number;
+  gold: number | null;
+}
+
 export interface WaveDef {
   creep: string;
   count: number;
@@ -106,6 +111,8 @@ export interface Creep {
   bounty: number;
 }
 
+export type TowerFate = 'standing' | 'sold' | 'destroyed';
+
 export interface Tower {
   id: number;
   def: TowerDef;
@@ -119,6 +126,7 @@ export interface Tower {
   kills: number;
   damage: number;
   aim: number;
+  fate: TowerFate;
 }
 
 export interface Projectile {

@@ -30,6 +30,7 @@ export function launchWave(world: World): void {
   world.phase = 'playing';
   world.spawners.push({ wave: index, creep: w.creep, left: w.count, interval: w.interval, timer: 0 });
   world.pending.set(index, w.count);
+  world.stats.waves[index] = { livesLost: 0, gold: null };
   world.nextWaveIn = canLaunchNext(world) ? waveDuration(index) + WAVE_GAP : Infinity;
   world.emit({ t: 'waveStart', wave: index, creep: w.creep, boss: !!CREEPS[w.creep].boss });
 }
@@ -87,6 +88,7 @@ export function updateWaves(world: World, dt: number): void {
     const bonus = clearBonus(wave);
     const interest = Math.min(Math.floor(world.gold * 0.04), 20 + wave * 2);
     world.addGold(bonus + interest);
+    world.stats.waves[wave].gold = world.gold;
     world.emit({ t: 'waveCleared', wave, bonus, interest });
   }
 

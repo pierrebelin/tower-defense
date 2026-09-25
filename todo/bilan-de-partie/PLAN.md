@@ -8,7 +8,7 @@
 |-----|-----------|-------|-----------|------|
 | F1 | La simulation garde la trace de chaque tour posée et de chaque vague lancée, sans rien changer au déroulement. | RM-01, RM-02, RM-04, RM-06 | — | ✅ |
 | F2 | Les quatre calculs du bilan (classement, familles, courbe, pertes) sont des règles pures. | RM-01, RM-03, RM-04, RM-05 | F1 | ✅ |
-| F3 | L'écran de fin affiche le bilan en quatre onglets. | RM-01, RM-03, RM-04, RM-05 / CU-01 | F2 | ⬜ |
+| F3 | L'écran de fin affiche le bilan en quatre onglets. | RM-01, RM-03, RM-04, RM-05 / CU-01 | F2 | ✅ |
 
 ## Périmètre
 
@@ -195,7 +195,7 @@ _Vide à l'écriture. Rempli par `/implement-tdd` : `Hn — [hypothèse] — à 
 
 ---
 
-## Lot F3 — Écran du bilan — ⬜
+## Lot F3 — Écran du bilan — ✅
 
 ### Intention
 Sous les cinq totaux de l'écran de fin, quatre onglets « Tours », « Familles », « Vagues », « Briseurs », « Tours » ouvert par défaut. **RM** : RM-01, RM-03, RM-04, RM-05 · **CU** : CU-01
@@ -213,7 +213,7 @@ Sous les cinq totaux de l'écran de fin, quatre onglets « Tours », « Familles
 ### Étapes et tests
 Tests écrits et **rouges avant toute ligne de production** de l'étape. Ordre : cas nominal d'abord (il fixe les signatures), refus ensuite.
 
-#### Étape 1 — Textes des quatre onglets — ⬜
+#### Étape 1 — Textes des quatre onglets — ✅
 | # | Test (`it`) | Fichier de test | RM |
 |---|-------------|-----------------|----|
 | 1 | `[RM-01] liste chaque tour avec nom, état, dégâts, éliminations, or investi et rendement` | `tests/presentation/describe.test.ts` | RM-01 |
@@ -221,15 +221,16 @@ Tests écrits et **rouges avant toute ligne de production** de l'étape. Ordre :
 | 3 | `[RM-04] affiche chaque vague avec ses vies perdues et son or` | idem | RM-04 |
 | 4 | `[RM-05] affiche le nombre de tours détruites et l'or qu'elles représentaient` | idem | RM-05 |
 | 5 | `[RM-05] affiche « Aucune tour perdue » quand aucune tour n'a été détruite` | idem | RM-05 |
+| 6 | `[RM-05] accorde au singulier quand une seule tour a été détruite` | idem | RM-05 |
 
 **Production autorisée** : `src/presentation/describe.ts` (`FAMILY_LABEL`, `FATE_LABEL`, `debriefTowers`, `debriefFamilies`, `debriefWaves`, `debriefBreakers`).
 
-#### Étape 2 — Onglets sur l'écran de fin — ⬜
+#### Étape 2 — Onglets sur l'écran de fin — ✅
 Pas de test unitaire (DOM, `.claude/rules/presentation.md`). Contrôle manuel via `npm run dev` : victoire, défaite et défaite en mode infini affichent les cinq totaux puis les quatre onglets, « Tours » ouvert, bascule au clic, boutons « Nouvelle partie » / « Continuer en mode infini » inchangés. **CU** : CU-01.
 
 **Production autorisée** : `src/presentation/Game.ts` (`showEnd`), `index.html` (styles des onglets et barres, à côté de `.endstats`).
 
-#### Étape 3 — Vérification — ⬜
+#### Étape 3 — Vérification — ✅
 Pas de nouveau test. `npx tsc --noEmit` + `npm test`.
 
 ### Éléments de code
@@ -243,4 +244,7 @@ Signatures seulement, jamais de corps.
 - `presentation/Game.ts` — `showEnd()` : ajoute la barre d'onglets et les quatre panneaux sous `.endstats`, « Tours » actif par défaut
 
 ### Hypothèses
-_Vide à l'écriture. Rempli par `/implement-tdd` : `Hn — [hypothèse] — à valider par [qui]`._
+- H1 — Formats : dégâts, or, éliminations et vies en `fmt0` ; rendement en `fmt1` ; part en pourcentage `fmt0(share * 100)` suivi de « % ». — à valider par l'utilisateur
+- H2 — Vagues numérotées à partir de 1 (`Vague ${wave + 1}`), comme le reste de l'interface. — à valider par l'utilisateur
+- H3 — Onglet « Tours » vide (aucune tour posée) : pas de cas dédié, tableau sans ligne ; hors tests. — à valider par l'utilisateur
+- H4 — Onglet « Briseurs » accordé en nombre : « 1 tour détruite », « n tours détruites » (ajouté après audit, test n° 6 de l'étape 1). — à valider par l'utilisateur

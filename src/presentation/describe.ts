@@ -1,6 +1,8 @@
 import type { WaveBriefing } from '../application/queries/waveBriefing';
 import { ARMOR_LABEL, ATTACK_LABEL, ATTACK_TABLE } from '../domain/rules/Damage';
-import type { ArmorType, AttackType, Creep, CreepDef, TargetMode, TowerDef } from '../domain/model/types';
+import type { ArmorType, AttackType, Creep, CreepDef, TargetMode, Tower, TowerDef, TowerFate } from '../domain/model/types';
+import type { breakerLosses, familyDamage, waveCurve } from '../domain/rules/debrief';
+import { towerYield } from '../domain/rules/debrief';
 
 // Textes du panneau d'information. Tout est échappé : les seules données
 // injectées viennent des fichiers de données du jeu.
@@ -25,6 +27,7 @@ const LAYER: Record<string, string> = { ground: 'Sol', air: 'Air', both: 'Sol et
 
 export const FAMILY_LABEL: Record<string, string> = {
   wall: 'Maçonnerie', archer: 'Archers', cannon: 'Artillerie', frost: 'Givre', storm: 'Foudre', venom: 'Venin',
+  hybrid: 'Hybrides',
 };
 
 function stat(label: string, value: string): string {
@@ -150,6 +153,46 @@ export function creepEffects(c: Creep): string[] {
     s.push(`Empoisonné · ${doses} · ${fmt0(dps)} PV/s · encore ${fmt1(t)} s`);
   }
   return s;
+}
+
+export const FATE_LABEL: Record<TowerFate, string> = { standing: 'En place', sold: 'Vendue', destroyed: 'Détruite' };
+
+export function debriefTowers(towers: Tower[]): string {
+  const rows = towers.map((t) => `<tr class="debrief-tower">
+      <td>${esc(t.def.name)}</td>
+      <td>${FATE_LABEL[t.fate]}</td>
+      <td>${fmt0(t.damage)}</td>
+      <td>${fmt0(t.kills)}</td>
+      <td>${fmt0(t.spent)}</td>
+      <td>${fmt1(towerYield(t))}</td>
+    </tr>`).join('');
+  const head = `<thead><tr><th>Tour</th><th>État</th><th>Dégâts</th><th>Éliminations</th><th>Or investi</th><th>Rendement</th></tr></thead>`;
+  return `<table class="debrief-towers">${head}${rows}</table>`;
+}
+
+export function debriefFamilies(rows: ReturnType<typeof familyDamage>): string {
+  return rows.map((r) => `<div class="debrief-family">
+      <span>${FAMILY_LABEL[r.family]}</span>
+      <div class="debrief-bar" style="width: ${fmt0(r.share * 100)}%"></div>
+      <span>${fmt0(r.damage)}</span>
+      <span>${fmt0(r.share * 100)} %</span>
+    </div>`).join('');
+}
+
+export function debriefWaves(rows: ReturnType<typeof waveCurve>): string {
+  const lines = rows.map((r) => `<tr class="debrief-wave">
+      <td>Vague ${r.wave + 1}</td>
+      <td>${fmt0(r.livesLost)}</td>
+      <td>${fmt0(r.gold)}</td>
+    </tr>`).join('');
+  const head = `<thead><tr><th>Vague</th><th>Vies perdues</th><th>Or</th></tr></thead>`;
+  return `<table class="debrief-waves">${head}${lines}</table>`;
+}
+
+export function debriefBreakers(losses: ReturnType<typeof breakerLosses>): string {
+  if (losses.count === 0) return '<p class="debrief-breakers">Aucune tour perdue</p>';
+  const noun = losses.count > 1 ? 'tours détruites' : 'tour détruite';
+  return `<p class="debrief-breakers">${fmt0(losses.count)} ${noun} · ${fmt0(losses.gold)} or</p>`;
 }
 
 export function creepInfo(c: Creep): string {

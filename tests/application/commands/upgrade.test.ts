@@ -10,6 +10,17 @@ describe('upgrade', () => {
     expect(dispatch(w, { c: 'upgrade', tower: r.id, def: 'cannon' }).ok).toBe(true);
     expect(gold - w.gold).toBe(17);
   });
+
+  it('[RM-02] garde une seule entrée sous le nom amélioré quand la tour est améliorée', () => {
+    const w = newWorld();
+    const r = dispatch(w, { c: 'build', def: 'archer', x: 10, y: 8 }) as { ok: true; id: number };
+
+    dispatch(w, { c: 'upgrade', tower: r.id, def: 'sniper' });
+
+    expect(w.stats.towers.size).toBe(1);
+    const entry = w.stats.towers.get(r.id)!;
+    expect(entry.def.name).toBe('Tour de guet');
+  });
 });
 
 describe('upgrade — infusion', () => {
