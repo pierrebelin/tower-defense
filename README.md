@@ -1,0 +1,88 @@
+# Dédale TD
+
+Tower defense de *mazing* dans l'esprit des cartes personnalisées de Warcraft III
+(Wintermaul, Element TD) : pas de chemin imposé, c'est vous qui dessinez le
+labyrinthe avec vos tours. TypeScript, Canvas 2D, aucune dépendance à l'exécution.
+
+## Lancer
+
+```bash
+npm install
+npm run dev              # serveur de dev Vite avec rechargement
+npm test                 # tests de la simulation + test d'équilibrage par un bot
+npm run build            # dist/index.html : un seul fichier autonome, jouable hors ligne
+npm run build:artifact   # variante sans enveloppe <html>, pour une page hébergée
+```
+
+## Règles
+
+- Les créatures terrestres partent du portail, **doivent toucher la pierre runique**, puis
+  rejoignent la porte. Le champ est traversé deux fois.
+- Tours 2×2 posées librement. Une construction qui fermerait le passage (pour le trajet
+  complet ou pour une créature déjà en route) est refusée.
+- **Murs à 3 or** pour allonger le trajet, transformables en n'importe quelle tour de base
+  pour la différence de prix.
+- **Table attaque / armure** à la Warcraft III (Normale, Perçante, Siège, Magique, Chaos
+  contre Sans armure, Légère, Moyenne, Lourde, Fortifiée, Héroïque), et réduction par
+  valeur d'armure `0,06·a / (1 + 0,06·a)`.
+- Volants (ignorent le labyrinthe), immunisés à la magie, régénération, trois chefs.
+- Remboursement à 100 % de ce qui est bâti depuis le dernier lancement de vague, 75 %
+  sinon : le *juggling* (vendre et reconstruire pour détourner le flot) est possible.
+- Prime de fin de vague, intérêts de 4 % plafonnés, bonus pour appeler une vague en avance.
+- 30 vagues, puis mode infini.
+
+Commandes : `Q W E R A S` construire, clic pour poser (clic droit / `Échap` pour annuler),
+`Espace` appeler la vague, `1 2 3` vitesse, `P` pause, `M` son, `L` trajet, `H` aide.
+Sur une tour : `Q W…` améliorer, `Z` ciblage, `V` vendre. Au doigt : premier appui pour
+prévisualiser, second appui au même endroit pour bâtir.
+
+## Architecture
+
+```
+src/
+  core/        GameLoop (pas fixe 1/60 s), Rng (mulberry32, graine)
+  data/        towers.ts, creeps.ts (+ vagues, difficultés), map.ts (carte en ASCII)
+  sim/         ← aucune dépendance au DOM, testée sous Node
+    World.ts       état complet + step() + dispatch(commande)
+    Grid.ts        terrain et occupation
+    FlowField.ts   Dijkstra 8 directions par tronçon (portail → rune → porte)
+    commands.ts    build / upgrade / sell / target / callWave, validation anti-blocage
+    Damage.ts      table attaque/armure, formule d'armure
+    systems/       waves, movement, combat (+ projectiles, chaînes), status (poison, lenteur…)
+  render/      Renderer (Canvas 2D), sprites procéduraux, Effects (particules, textes)
+  audio/       Sfx : sons synthétisés en Web Audio, aucun fichier
+  ui/          Game : entrées, panneau de commandes 4×3, HUD, écrans ; describe.ts : textes
+tests/         sim.test.ts, balance.test.ts (bot), bot.ts
+```
+
+Les choix qui comptent :
+
+- **Simulation pure et déterministe.** `World` n'est modifié que par `dispatch(commande)`
+  et `step()`. Même graine + même journal de commandes = même partie, ce que vérifie un
+  test de rejeu. C'est la base d'un replay, d'un mode spectateur ou d'un multijoueur en
+  *lockstep* comme celui de Warcraft III. Côté architecture, c'est un modèle
+  commande / événement : les commandes entrent, les événements (`kill`, `hit`, `leak`,
+  `waveStart`…) sortent et alimentent le rendu, le son et l'interface sans que la
+  simulation les connaisse.
+- **Champs de flux plutôt que A\* par créature.** Un Dijkstra par tronçon donne à chaque
+  case la distance à la cible et la case suivante. Le coût ne dépend pas du nombre de
+  créatures, et recalculer après chaque construction est instantané. La même passe sert à
+  valider qu'une construction ne ferme pas le passage et à prévisualiser le nouveau trajet.
+- **Tout est donnée.** Tours, arbre d'amélioration, créatures, vagues et carte sont des
+  objets simples ; ajouter une tour ou une carte ne touche pas au moteur.
+- **Rendu interchangeable.** `Renderer` ne fait que lire `World`. Passer à PixiJS ou à
+  WebGL ne toucherait ni la simulation ni les tests.
+
+## Équilibrage
+
+`tests/balance.test.ts` fait jouer un bot volontairement simple (labyrinthe fixe en chicanes,
+aucune adaptation aux vagues) sur trois graines par difficulté. Il gagne toujours en Recrue,
+gagne en Vétéran avec une dizaine de vies perdues et échoue tôt en Légende. Un joueur qui
+construit un vrai labyrinthe fait nettement mieux : Légende est pensée pour lui.
+
+## Pistes
+
+- Multijoueur à plusieurs couloirs (le déterminisme est déjà là : il suffit d'échanger les commandes).
+- Éditeur de cartes : la carte est un tableau de chaînes.
+- Enregistrement et relecture de parties à partir de `world.log`.
+- Rendu PixiJS pour des milliers de particules, sprites dessinés à la main.

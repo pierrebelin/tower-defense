@@ -1,0 +1,22 @@
+{
+  "name": "dedale-td",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tower defense de mazing inspiré des TD custom de Warcraft III — TypeScript, Canvas 2D, simulation déterministe.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "balance": "vitest run tests/balance.test.ts",
+    "build:artifact": "npm run build && node scripts/artifact.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0",
+    "typescript": "^5.0.0",
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.0.0",
+    "vitest": "^3.0.0"
+  }
+}
