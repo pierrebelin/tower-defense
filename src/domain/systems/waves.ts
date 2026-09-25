@@ -1,6 +1,6 @@
 import { baseHp, bountyFor, clearBonus, CREEPS, DIFFICULTY, waveAt } from '../catalog/creeps';
 import type { World } from '../model/World';
-import type { Creep } from '../model/types';
+import type { Creep, CreepDef } from '../model/types';
 
 export interface Spawner {
   wave: number;
@@ -36,10 +36,15 @@ export function launchWave(world: World): void {
   world.emit({ t: 'waveStart', wave: index, creep: w.creep, boss: !!CREEPS[w.creep].boss });
 }
 
+/** PV d'une créature à la vague `wave`, difficulté et mode infini compris. */
+export function creepHp(world: World, def: CreepDef, wave: number): number {
+  const endlessMult = wave >= world.campaignLength ? Math.pow(1.08, wave - world.campaignLength + 1) : 1;
+  return Math.round(baseHp(wave) * def.hpFactor * DIFFICULTY[world.difficulty].hp * endlessMult);
+}
+
 export function spawnCreep(world: World, defId: string, wave: number): Creep {
   const def = CREEPS[defId];
-  const endlessMult = wave >= world.campaignLength ? Math.pow(1.08, wave - world.campaignLength + 1) : 1;
-  const hp = Math.round(baseHp(wave) * def.hpFactor * DIFFICULTY[world.difficulty].hp * endlessMult);
+  const hp = creepHp(world, def, wave);
   const g = world.grid;
   const cell = g.spawnCells[world.rng.int(g.spawnCells.length)];
   const x = g.cx(cell) + 0.5;

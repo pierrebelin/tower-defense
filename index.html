@@ -53,6 +53,24 @@
   .res small { font: 500 13px var(--caps); color: var(--text-dim); letter-spacing: 0.04em; }
   .spacer { flex: 1; }
   .next { display: flex; align-items: center; gap: 10px; }
+  .briefing { position: relative; cursor: help; }
+  .briefing[hidden] { display: none; }
+  .briefing .chip {
+    display: inline-block; font: 500 14px var(--caps); letter-spacing: 0.03em; color: var(--text-dim);
+    border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap;
+  }
+  .briefing .chip b { color: var(--text); font-weight: 500; }
+  .briefing:hover .chip, .briefing:focus .chip { border-color: var(--bronze); }
+  .briefing .detail {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; width: 300px; max-width: calc(100vw - 32px);
+    background: rgba(20, 16, 11, 0.96); border: 1px solid var(--line); border-radius: 4px;
+    padding: 8px 12px; font-size: 14px; color: var(--text-dim); box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  }
+  .briefing:hover .detail, .briefing:focus .detail { display: block; }
+  .briefing .when { font: 500 13px var(--caps); color: var(--gold); letter-spacing: 0.04em; }
+  .briefing h3 { margin: 0 0 4px; font: 700 17px var(--caps); color: var(--text); letter-spacing: 0.03em; }
+  .briefing p { margin: 4px 0 0; }
+  .briefing .facts { color: var(--text); font-variant-numeric: tabular-nums; }
   .next .timer { font: 500 14px var(--caps); color: var(--text-dim); letter-spacing: 0.03em; font-variant-numeric: tabular-nums; min-width: 9.5em; text-align: right; }
   .btn {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
@@ -174,6 +192,8 @@
     #portrait { width: 52px; height: 52px; }
     .unit h2 { font-size: 18px; }
     .stage { padding: 6px 8px; }
+    .next { flex-wrap: wrap; }
+    .briefing .detail { right: auto; left: 0; }
     .sheet { padding: 18px; }
     .sheet h1 { font-size: 48px; }
     .diffs { grid-template-columns: 1fr; }
@@ -198,7 +218,11 @@
     <span class="res hide-sm" title="Longueur du trajet terrestre, en cases"><small>Labyrinthe</small> <b id="maze">0</b></span>
     <span class="spacer"></span>
     <span class="next">
-      <span class="timer" id="timer"></span>
+      <span class="briefing" id="briefing" tabindex="0" hidden>
+        <span class="chip" id="briefingChip"></span>
+        <span class="detail" id="briefingDetail"></span>
+      </span>
+      <span class="timer"><span class="hide-sm" id="timerLabel"></span><span id="timer"></span></span>
       <button class="btn primary" id="callBtn" type="button">Appeler<kbd>Espace</kbd></button>
     </span>
     <span class="seg" role="group" aria-label="Vitesse de jeu">

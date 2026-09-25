@@ -11,11 +11,12 @@ import { ARMOR_LABEL, ATTACK_LABEL, ATTACK_TABLE } from '../domain/rules/Damage'
 import { dispatch } from '../application/dispatch';
 import { canBuild } from '../application/queries/canBuild';
 import { previewRoute } from '../application/queries/previewRoute';
+import { waveBriefing } from '../application/queries/waveBriefing';
 import { refundValue, upgradeCost } from '../domain/rules/pricing';
 import { canLaunchNext } from '../domain/systems/waves';
 import { World } from '../domain/model/World';
 import type { ArmorType, AttackType, Creep, Difficulty, GameEvent, TargetMode, Tower } from '../domain/model/types';
-import { creepInfo, fmt0, fmt1, fmtM, nextWaveInfo, TARGET_LABEL, towerInfo } from './describe';
+import { briefingChip, briefingInfo, creepInfo, fmt0, fmt1, fmtM, nextWaveInfo, TARGET_LABEL, towerInfo } from './describe';
 
 const KEYS = ['q', 'w', 'e', 'r', 'a', 's', 'd', 'f', 'z', 'x', 'c', 'v'];
 const TARGET_ORDER: TargetMode[] = ['first', 'last', 'strong', 'weak', 'close'];
@@ -64,6 +65,7 @@ export class Game {
   private cardKey = '';
   private infoCache = '';
   private unitCache = '';
+  private briefingCache = '';
   private hud: Record<string, string> = {};
   private overlay: 'start' | 'help' | 'end' | 'pause' | null = null;
   private pausedByOverlay = false;
@@ -170,6 +172,7 @@ export class Game {
     this.updateHud();
     this.updateCard();
     this.updateInfo();
+    this.updateBriefing();
     this.drawPortrait();
 
     if ((w.phase === 'victory' || w.phase === 'defeat') && !this.endShown && !this.fx.banner) {
@@ -562,8 +565,8 @@ export class Game {
       html = towerInfo(t.def, null) + extra;
     } else if (this.selected?.kind === 'creep') {
       const c = w.creeps.find((k) => k.id === this.selected!.id);
-      html = c ? creepInfo(c) : nextWaveInfo(w);
-    } else html = nextWaveInfo(w);
+      html = c ? creepInfo(c) : nextWaveInfo(waveBriefing(w));
+    } else html = nextWaveInfo(waveBriefing(w));
     if (html !== this.infoCache) {
       this.infoCache = html;
       $('info').innerHTML = html;
@@ -595,6 +598,18 @@ export class Game {
       this.unitCache = unit;
       $('unitText').innerHTML = unit;
     }
+  }
+
+  /** Résumé de la prochaine vague dans la barre du haut ; détail au survol. */
+  private updateBriefing(): void {
+    const b = waveBriefing(this.world);
+    const html = b ? briefingChip(b) + briefingInfo(b) : '';
+    if (html === this.briefingCache) return;
+    this.briefingCache = html;
+    $('briefing').hidden = !b;
+    if (!b) return;
+    $('briefingChip').innerHTML = briefingChip(b);
+    $('briefingDetail').innerHTML = briefingInfo(b);
   }
 
   private drawPortrait(): void {
@@ -641,7 +656,8 @@ export class Game {
     set('maze', fmt0(w.mazeLength()));
     const can = canLaunchNext(w);
     const secs = Math.ceil(Math.max(0, w.nextWaveIn));
-    set('timer', can ? `Vague suivante : ${secs} s` : w.phase === 'playing' ? 'Dernière vague' : '');
+    set('timerLabel', can ? 'Vague suivante : ' : '');
+    set('timer', can ? `${secs} s` : w.phase === 'playing' ? 'Dernière vague' : '');
     const bonus = can && Number.isFinite(w.nextWaveIn) ? Math.floor(Math.max(0, w.nextWaveIn) * 0.5) : 0;
     const label = can ? (bonus > 0 ? `Appeler +${bonus}` : 'Appeler') : 'Appeler';
     if (this.hud.call !== label + can) {

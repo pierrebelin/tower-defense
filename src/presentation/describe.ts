@@ -1,6 +1,5 @@
-import { CREEPS, waveAt, baseHp, bountyFor, DIFFICULTY } from '../domain/catalog/creeps';
+import type { WaveBriefing } from '../application/queries/waveBriefing';
 import { ARMOR_LABEL, ATTACK_LABEL, ATTACK_TABLE } from '../domain/rules/Damage';
-import type { World } from '../domain/model/World';
 import type { ArmorType, AttackType, Creep, CreepDef, TargetMode, TowerDef } from '../domain/model/types';
 
 // Textes du panneau d'information. Tout est échappé : les seules données
@@ -93,22 +92,40 @@ export function counters(def: CreepDef): string {
   return pick.map(([t, m]) => `${ATTACK_LABEL[t]} ×${fmtM(m)}`).join(', ');
 }
 
-export function nextWaveInfo(world: World): string {
-  const i = world.wave + 1;
-  if (!world.endless && i >= world.campaignLength) {
-    return `<h3>Dernière vague lancée</h3><p>Tenez jusqu'à ce que la dernière créature tombe.</p>`;
-  }
-  const w = waveAt(i);
-  const def = CREEPS[w.creep];
-  const hp = Math.round(baseHp(i) * def.hpFactor * DIFFICULTY[world.difficulty].hp * (i >= world.campaignLength ? Math.pow(1.08, i - world.campaignLength + 1) : 1));
-  const count = w.count > 1 ? ` ×${w.count}` : '';
+function waveHint(def: CreepDef): string {
   let hint = `Le plus efficace : ${counters(def)}.`;
   if (def.air) hint += ' Ils survolent le labyrinthe en ligne droite : seules les tours qui visent l’air les touchent.';
   if (def.magicImmune) hint += ' Givre et foudre ne leur font rien, sauf le Prisme du néant.';
-  return `<h3>Prochaine vague ${i + 1} · ${esc(def.boss ? def.name : def.plural)}${count}</h3>
-    <div class="stats">${stat('PV', fmt0(hp))}${stat('Vitesse', fmt1(def.speed))}${stat('Butin', `${bountyFor(i, def)} or`)}</div>
-    <div>${creepTags(def)}</div>
-    <p>${esc(hint)}</p>`;
+  return hint;
+}
+
+const waveName = (b: WaveBriefing) => (b.creep.boss ? b.creep.name : b.creep.plural);
+
+export function nextWaveInfo(b: WaveBriefing | null): string {
+  if (!b) return `<h3>Dernière vague lancée</h3><p>Tenez jusqu'à ce que la dernière créature tombe.</p>`;
+  const count = b.count > 1 ? ` ×${b.count}` : '';
+  return `<h3>Prochaine vague ${b.wave + 1} · ${esc(waveName(b))}${count}</h3>
+    <div class="stats">${stat('PV', fmt0(b.hp))}${stat('Vitesse', fmt1(b.creep.speed))}${stat('Butin', `${b.bounty} or`)}</div>
+    <div>${creepTags(b.creep)}</div>
+    <p>${esc(waveHint(b.creep))}</p>`;
+}
+
+/** Résumé d'une ligne dans la barre du haut : « 12 Harpies · volants ». */
+export function briefingChip(b: WaveBriefing): string {
+  const traits = [b.creep.air && 'volants', b.creep.magicImmune && 'immunisés', b.creep.boss && 'chef'].filter(Boolean);
+  const who = b.count > 1 ? `${b.count} ${b.creep.plural}` : b.creep.name;
+  return `<b>${esc(who)}</b>${traits.length ? ` · ${traits.join(' · ')}` : ''}`;
+}
+
+/** Détail de la prochaine vague, déroulé au survol du résumé. */
+export function briefingInfo(b: WaveBriefing): string {
+  const who = b.count > 1 ? `${b.count} ${b.creep.plural}` : `Chef : ${b.creep.name}`;
+  const hp = b.count > 1 ? `${fmt0(b.hp)} PV chacun · ${fmt0(b.hp * b.count)} au total` : `${fmt0(b.hp)} PV`;
+  return `<div class="when">Vague ${b.wave + 1}</div>
+    <h3>${esc(who)}</h3>
+    <div>${creepTags(b.creep)}</div>
+    <p class="facts">${hp} · vitesse ${fmt1(b.creep.speed)} · butin ${b.bounty} or</p>
+    <p>${esc(waveHint(b.creep))}</p>`;
 }
 
 export function creepInfo(c: Creep): string {
