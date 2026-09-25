@@ -9,7 +9,7 @@ export function build(world: World, cmd: Extract<Command, { c: 'build' }>): Resu
   const def = TOWERS[cmd.def];
   const t: Tower = {
     id: world.id(), def, x: cmd.x, y: cmd.y, cx: cmd.x + 1, cy: cmd.y + 1,
-    cooldown: 0.2, targetMode: 'first', spent: def.cost, freshSpent: def.cost,
+    cooldown: 0.2, targetMode: 'first', spent: def.cost,
     kills: 0, damage: 0, aim: -Math.PI / 2,
   };
   world.gold -= def.cost;

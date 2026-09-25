@@ -23,6 +23,10 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const LAYER: Record<string, string> = { ground: 'Sol', air: 'Air', both: 'Sol et air' };
 
+export const FAMILY_LABEL: Record<string, string> = {
+  wall: 'Maçonnerie', archer: 'Archers', cannon: 'Artillerie', frost: 'Givre', storm: 'Foudre', venom: 'Venin',
+};
+
 function stat(label: string, value: string): string {
   return `<span><em>${label}</em>${value}</span>`;
 }
@@ -50,13 +54,19 @@ export function towerSpecials(def: TowerDef): string[] {
   if (a.multishot) s.push(`${a.multishot} cibles par salve`);
   if (a.crit) s.push(`${Math.round(a.crit.chance * 100)} % de critiques ×${fmt1(a.crit.mult)}`);
   if (a.armorShred) s.push(`−${a.armorShred.amount} armure`);
+  if (a.freeze) s.push(`gèle ${Math.round(a.freeze.chance * 100)} % des touches pendant ${fmt1(a.freeze.duration)} s (répit ${fmt1(a.freeze.guard)} s)`);
   return s;
 }
 
-export function towerInfo(def: TowerDef, cost: number | null, heading = def.name): string {
+export function elementsLabel(def: TowerDef): string {
+  return def.elements ? def.elements.map((f) => FAMILY_LABEL[f]).join(' · ') : '';
+}
+
+export function towerInfo(def: TowerDef, cost: number | null, heading = def.name, locked?: string): string {
   const a = def.attack;
   const costLine = cost !== null ? ` · ${cost} or` : '';
-  if (!a) return `<h3>${esc(heading)}${costLine}</h3><p>${esc(def.desc)}</p>`;
+  const lockedLine = locked ? `<p class="locked">${esc(locked)}</p>` : '';
+  if (!a) return `<h3>${esc(heading)}${costLine}</h3><p>${esc(def.desc)}</p>${lockedLine}`;
   const dps = ((a.dmg[0] + a.dmg[1]) / 2 / a.cooldown) * (a.multishot ?? 1);
   const specials = towerSpecials(def);
   return `<h3>${esc(heading)}${costLine}</h3>
@@ -69,7 +79,7 @@ export function towerInfo(def: TowerDef, cost: number | null, heading = def.name
       ${stat('DPS', `≈ ${fmt0(dps)}`)}
     </div>
     <p>${esc(def.desc)}${specials.length ? ' ' + esc(cap(specials.join(' · '))) + '.' : ''}</p>
-    <div>${matchupTags(a.type)}</div>`;
+    <div>${matchupTags(a.type)}</div>${lockedLine}`;
 }
 
 export function creepTags(def: CreepDef): string {

@@ -48,4 +48,61 @@ describe('World', () => {
     expect(b.stats.kills).toBe(a.stats.kills);
     expect(b.creeps.map((c) => Math.round(c.hp))).toEqual(a.creeps.map((c) => Math.round(c.hp)));
   });
+
+  it('[RM-10] rejoue à l’identique une partie avec Obus cryogénique quand la graine et le journal sont les mêmes', () => {
+    const play = () => {
+      const w = new World({ map: MAP_CROSSING, difficulty: 'normal', seed: 11 });
+      w.gold = 1000;
+      const cannon = dispatch(w, { c: 'build', def: 'cannon', x: 8, y: 3 }) as { ok: true; id: number };
+      expect(cannon.ok).toBe(true);
+      expect(dispatch(w, { c: 'upgrade', tower: cannon.id, def: 'mortar' }).ok).toBe(true);
+      const frost = dispatch(w, { c: 'build', def: 'frost', x: 12, y: 3 }) as { ok: true; id: number };
+      expect(frost.ok).toBe(true);
+      expect(dispatch(w, { c: 'upgrade', tower: frost.id, def: 'glacier' }).ok).toBe(true);
+      w.wave = 7;
+      expect(dispatch(w, { c: 'upgrade', tower: cannon.id, def: 'cryoshell' }).ok).toBe(true);
+      expect(dispatch(w, { c: 'callWave' }).ok).toBe(true);
+      const frozenIds = new Set<number>();
+      for (let elapsed = 0; elapsed < 90; elapsed += 0.1) {
+        run(w, 0.1);
+        for (const c of w.creeps) if (c.frozen > 0) frozenIds.add(c.id);
+      }
+      return {
+        gold: w.gold,
+        lives: w.lives,
+        frozenCount: frozenIds.size,
+        creeps: w.creeps.map((c) => ({ x: c.x, y: c.y, hp: Math.round(c.hp * 100) / 100, frozen: c.frozen > 0 })),
+      };
+    };
+
+    const a = play();
+    const b = play();
+
+    expect(a).toEqual(b);
+    expect(a.frozenCount).toBeGreaterThan(0);
+  });
+
+  it('[RM-12] ralentit toutes les créatures touchées par les rebonds de la Grêle', () => {
+    const w = new World({ map: MAP_CROSSING, difficulty: 'normal', seed: 11 });
+    w.gold = 1000;
+    const storm = dispatch(w, { c: 'build', def: 'storm', x: 8, y: 3 }) as { ok: true; id: number };
+    expect(storm.ok).toBe(true);
+    expect(dispatch(w, { c: 'upgrade', tower: storm.id, def: 'tempest' }).ok).toBe(true);
+    const frost = dispatch(w, { c: 'build', def: 'frost', x: 12, y: 3 }) as { ok: true; id: number };
+    expect(frost.ok).toBe(true);
+    expect(dispatch(w, { c: 'upgrade', tower: frost.id, def: 'glacier' }).ok).toBe(true);
+    w.wave = 7;
+    expect(dispatch(w, { c: 'upgrade', tower: storm.id, def: 'hail' }).ok).toBe(true);
+    expect(dispatch(w, { c: 'sell', tower: frost.id }).ok).toBe(true);
+    expect(dispatch(w, { c: 'callWave' }).ok).toBe(true);
+
+    let maxSlowedAtOnce = 0;
+    for (let elapsed = 0; elapsed < 90; elapsed += 0.1) {
+      run(w, 0.1);
+      const slowedNow = w.creeps.filter((c) => c.slowPct > 0).length;
+      if (slowedNow > maxSlowedAtOnce) maxSlowedAtOnce = slowedNow;
+    }
+
+    expect(maxSlowedAtOnce).toBeGreaterThanOrEqual(3);
+  });
 });

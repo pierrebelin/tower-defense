@@ -25,6 +25,7 @@ export interface AttackDef {
   multishot?: number;
   crit?: { chance: number; mult: number };
   armorShred?: { amount: number; duration: number };
+  freeze?: { chance: number; duration: number; guard: number };
 }
 
 export interface TowerDef {
@@ -37,6 +38,8 @@ export interface TowerDef {
   desc: string;
   attack?: AttackDef;
   upgrades: string[];
+  /** Familles d'origine pour une tour hybride issue d'une infusion. */
+  elements?: [Family, Family];
 }
 
 export interface CreepDef {
@@ -93,6 +96,8 @@ export interface Creep {
   shred: number;
   shredTimer: number;
   poisons: { dps: number; t: number; towerId: number; defId: string }[];
+  frozen: number;
+  freezeGuard: number;
   alive: boolean;
   /** Distance restante estimée jusqu'à la sortie (pour le ciblage « premier »). */
   remaining: number;
@@ -111,8 +116,6 @@ export interface Tower {
   cooldown: number;
   targetMode: TargetMode;
   spent: number;
-  /** Or dépensé depuis le dernier lancement de vague : remboursé à 100 %. */
-  freshSpent: number;
   kills: number;
   damage: number;
   aim: number;

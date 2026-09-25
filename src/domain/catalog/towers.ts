@@ -23,7 +23,7 @@ const T: TowerDef[] = [
     id: 'sniper', name: 'Tour de guet', family: 'archer', tier: 2, cost: 40,
     desc: 'Longue portée, tirs lourds et coups critiques.',
     attack: { type: 'pierce', dmg: [40, 50], cooldown: 1.5, range: 7.5, projectileSpeed: 26, targets: 'both', crit: { chance: 0.2, mult: 2.5 } },
-    upgrades: ['hawkeye'],
+    upgrades: ['hawkeye', 'stinger'],
   },
   {
     id: 'hawkeye', name: 'Œil du faucon', family: 'archer', tier: 3, cost: 120,
@@ -35,7 +35,7 @@ const T: TowerDef[] = [
     id: 'volley', name: 'Tour à volées', family: 'archer', tier: 2, cost: 35,
     desc: 'Tire sur trois cibles à la fois.',
     attack: { type: 'pierce', dmg: [12, 15], cooldown: 0.7, range: 5, projectileSpeed: 18, targets: 'both', multishot: 3 },
-    upgrades: ['arrowstorm'],
+    upgrades: ['arrowstorm', 'stinger'],
   },
   {
     id: 'arrowstorm', name: 'Pluie de flèches', family: 'archer', tier: 3, cost: 110,
@@ -55,7 +55,7 @@ const T: TowerDef[] = [
     id: 'mortar', name: 'Mortier', family: 'cannon', tier: 2, cost: 50,
     desc: 'Grande portée et large zone d’impact.',
     attack: { type: 'siege', dmg: [55, 70], cooldown: 2.2, range: 6.5, projectileSpeed: 8, targets: 'ground', splash: { radius: 2, falloff: 0.5 } },
-    upgrades: ['bombard'],
+    upgrades: ['bombard', 'cryoshell'],
   },
   {
     id: 'bombard', name: 'Bombarde', family: 'cannon', tier: 3, cost: 140,
@@ -67,7 +67,7 @@ const T: TowerDef[] = [
     id: 'flak', name: 'Canon anti-aérien', family: 'cannon', tier: 2, cost: 45,
     desc: 'Éclats perçants contre les volants uniquement.',
     attack: { type: 'pierce', dmg: [45, 55], cooldown: 1, range: 6, projectileSpeed: 18, targets: 'air', splash: { radius: 1.5, falloff: 0.5 } },
-    upgrades: ['skybattery'],
+    upgrades: ['skybattery', 'cryoshell'],
   },
   {
     id: 'skybattery', name: 'Batterie céleste', family: 'cannon', tier: 3, cost: 130,
@@ -87,7 +87,7 @@ const T: TowerDef[] = [
     id: 'glacier', name: 'Glacier', family: 'frost', tier: 2, cost: 45,
     desc: 'Ralentissement de zone de 40 %.',
     attack: { type: 'magic', dmg: [16, 20], cooldown: 1.2, range: 4.5, projectileSpeed: 11, targets: 'both', splash: { radius: 1.6, falloff: 0.2 }, slow: { pct: 0.4, duration: 2.5 } },
-    upgrades: ['winterheart'],
+    upgrades: ['winterheart', 'cryoshell', 'hail'],
   },
   {
     id: 'winterheart', name: "Cœur de l'hiver", family: 'frost', tier: 3, cost: 120,
@@ -99,7 +99,7 @@ const T: TowerDef[] = [
     id: 'iceshard', name: 'Éclat de glace', family: 'frost', tier: 2, cost: 45,
     desc: 'Pointes de glace lourdes, ralentissement de 35 %.',
     attack: { type: 'magic', dmg: [40, 50], cooldown: 1.1, range: 5, projectileSpeed: 16, targets: 'both', slow: { pct: 0.35, duration: 2 } },
-    upgrades: ['frostlance'],
+    upgrades: ['frostlance', 'cryoshell', 'hail'],
   },
   {
     id: 'frostlance', name: 'Lance de givre', family: 'frost', tier: 3, cost: 130,
@@ -119,7 +119,7 @@ const T: TowerDef[] = [
     id: 'tempest', name: "Tour d'orage", family: 'storm', tier: 2, cost: 55,
     desc: 'Chaîne d’éclairs sur 5 cibles.',
     attack: { type: 'magic', dmg: [36, 44], cooldown: 1.3, range: 4.5, projectileSpeed: 0, targets: 'both', chain: { bounces: 5, range: 2.8, decay: 0.85 } },
-    upgrades: ['maelstrom'],
+    upgrades: ['maelstrom', 'hail'],
   },
   {
     id: 'maelstrom', name: 'Maelström', family: 'storm', tier: 3, cost: 150,
@@ -131,7 +131,7 @@ const T: TowerDef[] = [
     id: 'obelisk', name: 'Obélisque arcanique', family: 'storm', tier: 2, cost: 55,
     desc: 'Frappe unique et massive. Double dégâts contre les armures lourdes.',
     attack: { type: 'magic', dmg: [75, 95], cooldown: 1.4, range: 5.5, projectileSpeed: 0, targets: 'both' },
-    upgrades: ['voidprism'],
+    upgrades: ['voidprism', 'hail'],
   },
   {
     id: 'voidprism', name: 'Prisme du néant', family: 'storm', tier: 3, cost: 160,
@@ -151,7 +151,7 @@ const T: TowerDef[] = [
     id: 'acid', name: 'Tour acide', family: 'venom', tier: 2, cost: 45,
     desc: 'Poison puissant qui ronge 3 points d’armure.',
     attack: { type: 'normal', dmg: [6, 8], cooldown: 0.9, range: 4.5, projectileSpeed: 12, targets: 'both', poison: { dps: 15, duration: 4, maxStacks: 3 }, armorShred: { amount: 3, duration: 4 } },
-    upgrades: ['corrosion'],
+    upgrades: ['corrosion', 'stinger'],
   },
   {
     id: 'corrosion', name: 'Corrosion', family: 'venom', tier: 3, cost: 130,
@@ -163,7 +163,7 @@ const T: TowerDef[] = [
     id: 'plague', name: 'Nid de peste', family: 'venom', tier: 2, cost: 45,
     desc: 'Nuage toxique de zone. Sol uniquement.',
     attack: { type: 'normal', dmg: [5, 7], cooldown: 1.1, range: 4.5, projectileSpeed: 9, targets: 'ground', splash: { radius: 1.6, falloff: 0 }, poison: { dps: 11, duration: 5, maxStacks: 2 } },
-    upgrades: ['blight'],
+    upgrades: ['blight', 'stinger'],
   },
   {
     id: 'blight', name: 'Fléau', family: 'venom', tier: 3, cost: 130,
@@ -171,9 +171,59 @@ const T: TowerDef[] = [
     attack: { type: 'normal', dmg: [10, 14], cooldown: 1, range: 5, projectileSpeed: 10, targets: 'ground', splash: { radius: 2.3, falloff: 0 }, poison: { dps: 32, duration: 6, maxStacks: 2 } },
     upgrades: [],
   },
+
+  // Dard corrosif : infusion hybride archer/venin.
+  {
+    id: 'stinger', name: 'Dard corrosif', family: 'archer', tier: 1, cost: 70,
+    desc: "Trait perçant empoisonné qui ronge l'armure.",
+    elements: ['archer', 'venom'],
+    attack: { type: 'pierce', dmg: [28, 34], cooldown: 0.7, range: 5.5, projectileSpeed: 18, targets: 'both', poison: { dps: 18, duration: 4, maxStacks: 3 }, armorShred: { amount: 4, duration: 4 } },
+    upgrades: ['rustspike'],
+  },
+  {
+    id: 'rustspike', name: 'Aiguillon de rouille', family: 'archer', tier: 2, cost: 150,
+    desc: "Trait perçant empoisonné qui ronge l'armure, en plus dévastateur.",
+    elements: ['archer', 'venom'],
+    attack: { type: 'pierce', dmg: [85, 100], cooldown: 0.6, range: 6, projectileSpeed: 20, targets: 'both', poison: { dps: 45, duration: 4, maxStacks: 3 }, armorShred: { amount: 7, duration: 4 } },
+    upgrades: [],
+  },
+
+  // Obus cryogénique : infusion hybride canon/givre.
+  {
+    id: 'cryoshell', name: 'Obus cryogénique', family: 'cannon', tier: 1, cost: 70,
+    desc: 'Obus de zone qui ralentit et peut geler sa cible.',
+    elements: ['cannon', 'frost'],
+    attack: { type: 'siege', dmg: [55, 70], cooldown: 2, range: 5, projectileSpeed: 9, targets: 'ground', splash: { radius: 1.6, falloff: 0.4 }, slow: { pct: 0.35, duration: 2 }, freeze: { chance: 0.25, duration: 0.6, guard: 1.5 } },
+    upgrades: ['permafrost'],
+  },
+  {
+    id: 'permafrost', name: 'Obus du permafrost', family: 'cannon', tier: 2, cost: 160,
+    desc: 'Obus de zone qui ralentit et peut geler sa cible, en plus dévastateur.',
+    elements: ['cannon', 'frost'],
+    attack: { type: 'siege', dmg: [170, 210], cooldown: 2, range: 6, projectileSpeed: 10, targets: 'ground', splash: { radius: 2.1, falloff: 0.4 }, slow: { pct: 0.45, duration: 2.5 }, freeze: { chance: 0.25, duration: 0.6, guard: 1.5 } },
+    upgrades: [],
+  },
+
+  // Grêle : infusion hybride givre/foudre.
+  {
+    id: 'hail', name: 'Grêle', family: 'frost', tier: 1, cost: 75,
+    desc: 'Chaîne d’éclairs glacés : chaque rebond ralentit sa cible.',
+    elements: ['frost', 'storm'],
+    attack: { type: 'magic', dmg: [34, 42], cooldown: 1.2, range: 4.5, projectileSpeed: 0, targets: 'both', chain: { bounces: 4, range: 2.6, decay: 0.85 }, slow: { pct: 0.3, duration: 1.5 } },
+    upgrades: ['hailstorm'],
+  },
+  {
+    id: 'hailstorm', name: 'Tempête de grêle', family: 'frost', tier: 2, cost: 165,
+    desc: 'Chaîne d’éclairs glacés : chaque rebond ralentit sa cible, en plus dévastateur.',
+    elements: ['frost', 'storm'],
+    attack: { type: 'magic', dmg: [100, 120], cooldown: 1.2, range: 5, projectileSpeed: 0, targets: 'both', chain: { bounces: 6, range: 2.8, decay: 0.88 }, slow: { pct: 0.4, duration: 2 } },
+    upgrades: [],
+  },
 ];
 
 export const TOWERS: Record<string, TowerDef> = Object.fromEntries(T.map((t) => [t.id, t]));
+
+export const INFUSION_WAVE = 8;
 
 /** Ordre du panneau de construction (touches Q W E R A S). */
 export const BUILD_MENU = ['wall', 'archer', 'cannon', 'frost', 'storm', 'venom'];

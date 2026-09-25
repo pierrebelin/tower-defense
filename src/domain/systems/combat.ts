@@ -128,7 +128,7 @@ export function updateProjectiles(world: World, dt: number): void {
 }
 
 function hitCreep(world: World, towerId: number, defId: string, a: AttackDef, c: Creep, raw: number): void {
-  applyOnHit(c, a, towerId, defId);
+  applyOnHit(world, c, a, towerId, defId);
   applyDamage(world, c, raw, a.type, towerId, false);
 }
 

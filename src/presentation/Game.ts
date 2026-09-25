@@ -10,19 +10,17 @@ import { drawCreep, drawTower } from '../infrastructure/render/sprites';
 import { ARMOR_LABEL, ATTACK_LABEL, ATTACK_TABLE } from '../domain/rules/Damage';
 import { dispatch } from '../application/dispatch';
 import { canBuild } from '../application/queries/canBuild';
+import { infusionLock } from '../application/queries/infusionLock';
 import { previewRoute } from '../application/queries/previewRoute';
 import { waveBriefing } from '../application/queries/waveBriefing';
 import { refundValue, upgradeCost } from '../domain/rules/pricing';
 import { canLaunchNext } from '../domain/systems/waves';
 import { World } from '../domain/model/World';
 import type { ArmorType, AttackType, Creep, Difficulty, GameEvent, TargetMode, Tower } from '../domain/model/types';
-import { briefingChip, briefingInfo, creepInfo, fmt0, fmt1, fmtM, nextWaveInfo, TARGET_LABEL, towerInfo } from './describe';
+import { briefingChip, briefingInfo, creepInfo, elementsLabel, FAMILY_LABEL, fmt0, fmt1, fmtM, nextWaveInfo, TARGET_LABEL, towerInfo } from './describe';
 
 const KEYS = ['q', 'w', 'e', 'r', 'a', 's', 'd', 'f', 'z', 'x', 'c', 'v'];
 const TARGET_ORDER: TargetMode[] = ['first', 'last', 'strong', 'weak', 'close'];
-const FAMILY_LABEL: Record<string, string> = {
-  wall: 'Maçonnerie', archer: 'Archers', cannon: 'Artillerie', frost: 'Givre', storm: 'Foudre', venom: 'Venin',
-};
 const BEST_KEY = 'dedale.best.v1';
 
 const ICON_CANCEL = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M11 11l18 18M29 11L11 29" stroke="#e0664f" stroke-width="4" stroke-linecap="round"/></svg>';
@@ -37,6 +35,7 @@ interface Slot {
   cost?: number;
   poor?: boolean;
   active?: boolean;
+  locked?: string;
   run: () => void;
   info: () => string;
 }
@@ -479,11 +478,19 @@ export class Game {
       t.def.upgrades.forEach((id, i) => {
         const to = TOWERS[id];
         const cost = upgradeCost(t.def, to);
-        slots[i] = {
-          label: to.name, icon: this.icon(id), cost, poor: w.gold < cost,
-          run: () => this.upgrade(t, id),
-          info: () => towerInfo(to, cost, t.def.family === 'wall' ? `Transformer en ${to.name}` : `Améliorer en ${to.name}`),
-        };
+        const heading = t.def.family === 'wall' ? `Transformer en ${to.name}` : `Améliorer en ${to.name}`;
+        const locked = infusionLock(w, t.id, id);
+        slots[i] = locked
+          ? {
+              label: to.name, icon: this.icon(id), cost, poor: true, locked,
+              run: () => this.toast(locked, true),
+              info: () => towerInfo(to, cost, heading, locked),
+            }
+          : {
+              label: to.name, icon: this.icon(id), cost, poor: w.gold < cost,
+              run: () => this.upgrade(t, id),
+              info: () => towerInfo(to, cost, heading),
+            };
       });
       if (t.def.attack) {
         slots[8] = {
@@ -501,7 +508,7 @@ export class Game {
       slots[11] = {
         label: `Vendre +${refund}`, icon: ICON_SELL, cost: refund,
         run: () => this.sell(t),
-        info: () => `<h3>Vendre · +${refund} or</h3><p>L'or dépensé depuis le lancement de la dernière vague est rendu en entier, le reste à 75 %. Vendre puis reconstruire ailleurs, c'est l'art du « juggling » : détourner le flot en pleine vague.</p>`,
+        info: () => `<h3>Vendre · +${refund} or</h3><p>La moitié de l'or investi est rendue, à tout moment.</p>`,
       };
       return slots;
     }
@@ -579,7 +586,8 @@ export class Game {
       const touch = matchMedia('(pointer: coarse)').matches;
       unit = `<h2>${def.name}</h2><div class="sub">Construction · ${def.cost} or</div><div class="facts">${touch ? 'Touchez pour prévisualiser, touchez à nouveau pour bâtir.' : 'Clic pour bâtir · Échap pour annuler'}</div>`;
     } else if (t) {
-      unit = `<h2>${t.def.name}</h2><div class="sub">${FAMILY_LABEL[t.def.family]}${t.def.tier ? ` · niveau ${t.def.tier}` : ''}</div><div class="facts">${t.def.attack ? `${ATTACK_LABEL[t.def.attack.type]} · ${fmt0(t.kills)} éliminations` : 'Bloc de labyrinthe'}</div>`;
+      const family = t.def.elements ? `${elementsLabel(t.def)} · hybride` : FAMILY_LABEL[t.def.family];
+      unit = `<h2>${t.def.name}</h2><div class="sub">${family}${t.def.tier ? ` · niveau ${t.def.tier}` : ''}</div><div class="facts">${t.def.attack ? `${ATTACK_LABEL[t.def.attack.type]} · ${fmt0(t.kills)} éliminations` : 'Bloc de labyrinthe'}</div>`;
     } else if (this.selected?.kind === 'creep') {
       const c = w.creeps.find((k) => k.id === this.selected!.id);
       unit = c

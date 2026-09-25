@@ -1,6 +1,6 @@
 import type { Tower, TowerDef } from '../model/types';
 
-export const REFUND_RATE = 0.75;
+export const REFUND_RATE = 0.5;
 
 export function upgradeCost(from: TowerDef, to: TowerDef): number {
   // Un mur transformé en tour : on ne paie que la différence.
@@ -8,5 +8,5 @@ export function upgradeCost(from: TowerDef, to: TowerDef): number {
 }
 
 export function refundValue(t: Tower): number {
-  return Math.floor(t.freshSpent + (t.spent - t.freshSpent) * REFUND_RATE);
+  return Math.floor(t.spent * REFUND_RATE);
 }

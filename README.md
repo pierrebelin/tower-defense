@@ -26,8 +26,8 @@ npm run build:artifact   # variante sans enveloppe <html>, pour une page héberg
   contre Sans armure, Légère, Moyenne, Lourde, Fortifiée, Héroïque), et réduction par
   valeur d'armure `0,06·a / (1 + 0,06·a)`.
 - Volants (ignorent le labyrinthe), immunisés à la magie, régénération, trois chefs.
-- Remboursement à 100 % de ce qui est bâti depuis le dernier lancement de vague, 75 %
-  sinon : le *juggling* (vendre et reconstruire pour détourner le flot) est possible.
+- Remboursement à 50 % de l'or investi, à tout moment : vendre coûte la moitié de la
+  mise, le *juggling* (vendre et reconstruire pour détourner le flot) ne paie plus.
 - Prime de fin de vague, intérêts de 4 % plafonnés, bonus pour appeler une vague en avance.
 - 30 vagues, puis mode infini.
 

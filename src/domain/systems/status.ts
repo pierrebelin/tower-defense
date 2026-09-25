@@ -15,6 +15,11 @@ export function updateStatuses(world: World, dt: number): void {
       c.shredTimer -= dt;
       if (c.shredTimer <= 0) c.shred = 0;
     }
+    if (c.frozen > 0) {
+      c.frozen -= dt;
+    } else if (c.freezeGuard > 0) {
+      c.freezeGuard -= dt;
+    }
     if (c.def.regen) c.hp = Math.min(c.maxHp, c.hp + c.maxHp * c.def.regen * dt);
     for (const p of c.poisons) {
       p.t -= dt;
@@ -25,8 +30,13 @@ export function updateStatuses(world: World, dt: number): void {
   }
 }
 
-export function applyOnHit(c: Creep, a: AttackDef, towerId: number, defId: string): void {
+export function applyOnHit(world: World, c: Creep, a: AttackDef, towerId: number, defId: string): void {
   if (!c.alive) return;
+  const canFreeze = !c.def.boss && !c.def.magicImmune && c.frozen <= 0 && c.freezeGuard <= 0;
+  if (a.freeze && canFreeze && world.rng.next() < a.freeze.chance) {
+    c.frozen = a.freeze.duration;
+    c.freezeGuard = a.freeze.guard;
+  }
   if (a.slow && !c.def.magicImmune) {
     if (a.slow.pct >= c.slowPct) {
       c.slowPct = a.slow.pct;

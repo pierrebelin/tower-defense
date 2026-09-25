@@ -30,8 +30,6 @@ export function launchWave(world: World): void {
   world.phase = 'playing';
   world.spawners.push({ wave: index, creep: w.creep, left: w.count, interval: w.interval, timer: 0 });
   world.pending.set(index, w.count);
-  // Tout investissement antérieur au lancement n'est plus remboursé qu'à 75 %.
-  for (const t of world.towers) t.freshSpent = 0;
   world.nextWaveIn = canLaunchNext(world) ? waveDuration(index) + WAVE_GAP : Infinity;
   world.emit({ t: 'waveStart', wave: index, creep: w.creep, boss: !!CREEPS[w.creep].boss });
 }
@@ -52,7 +50,7 @@ export function spawnCreep(world: World, defId: string, wave: number): Creep {
   const c: Creep = {
     id: world.id(), def, wave, x, y, hp, maxHp: hp, leg: 0,
     tx: g.cx(cell), ty: g.cy(cell),
-    slowPct: 0, slowTimer: 0, shred: 0, shredTimer: 0, poisons: [],
+    slowPct: 0, slowTimer: 0, shred: 0, shredTimer: 0, poisons: [], frozen: 0, freezeGuard: 0,
     alive: true, remaining: Infinity, bob: world.rng.next() * Math.PI * 2, hitFlash: 0,
     bounty: bountyFor(wave, def),
   };

@@ -234,6 +234,13 @@ export function drawTower(ctx: Ctx, def: TowerDef, cx: number, cy: number, aim: 
       break;
     }
   }
+  // Liseré de la seconde famille : marque visuellement une tour hybride.
+  if (def.elements) {
+    ctx.strokeStyle = FAMILY_COLOR[def.elements[1]].main;
+    ctx.lineWidth = 0.06;
+    circle(ctx, cx, top, 0.68);
+    ctx.stroke();
+  }
   pips(ctx, cx, cy, def.tier);
 }
 

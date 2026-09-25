@@ -3,7 +3,7 @@ import type { Creep } from '../model/types';
 
 export function updateMovement(world: World, dt: number): void {
   for (const c of world.creeps) {
-    if (!c.alive) continue;
+    if (!c.alive || c.frozen > 0) continue;
     const speed = c.def.speed * (1 - c.slowPct);
     if (c.def.air) moveAir(world, c, speed * dt);
     else moveGround(world, c, speed * dt);
