@@ -128,9 +128,25 @@ export function briefingInfo(b: WaveBriefing): string {
     <p>${esc(waveHint(b.creep))}</p>`;
 }
 
+/** Effets en cours sur une créature (ralentissement, corrosion, poison). */
+export function creepEffects(c: Creep): string[] {
+  const s: string[] = [];
+  if (c.slowPct > 0) s.push(`Ralenti de ${Math.round(c.slowPct * 100)} % · encore ${fmt1(c.slowTimer)} s`);
+  if (c.shred > 0) s.push(`Armure corrodée de ${c.shred} · encore ${fmt1(c.shredTimer)} s`);
+  if (c.poisons.length) {
+    const dps = c.poisons.reduce((sum, p) => sum + p.dps, 0);
+    const t = Math.max(...c.poisons.map((p) => p.t));
+    const doses = `${c.poisons.length} dose${c.poisons.length > 1 ? 's' : ''}`;
+    s.push(`Empoisonné · ${doses} · ${fmt0(dps)} PV/s · encore ${fmt1(t)} s`);
+  }
+  return s;
+}
+
 export function creepInfo(c: Creep): string {
+  const effects = creepEffects(c).map((e) => `<span class="tag good">${esc(e)}</span>`).join('');
   return `<h3>${esc(c.def.name)} · vague ${c.wave + 1}</h3>
     <div class="stats">${stat('PV', `${fmt0(c.hp)} / ${fmt0(c.maxHp)}`)}${stat('Vitesse', fmt1(c.def.speed * (1 - c.slowPct)))}${stat('Armure', fmt0(c.def.armor - c.shred))}</div>
     <div>${creepTags(c.def)}</div>
+    ${effects ? `<div>${effects}</div>` : ''}
     <p>${esc(`Le plus efficace : ${counters(c.def)}.`)}</p>`;
 }
