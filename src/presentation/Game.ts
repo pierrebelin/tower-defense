@@ -18,7 +18,8 @@ import { canLaunchNext } from '../domain/systems/waves';
 import { importLegacyRecords, withRecord, type RecordBook } from '../domain/rules/records';
 import { World } from '../domain/model/World';
 import type { ArmorType, AttackType, Creep, Difficulty, GameEvent, MapDef, TargetMode, Tower } from '../domain/model/types';
-import { briefingChip, briefingInfo, creepInfo, elementsLabel, FAMILY_LABEL, fmt0, fmt1, fmtM, nextWaveInfo, TARGET_LABEL, towerInfo } from './describe';
+import { breakerLosses, familyDamage, towerRanking, waveCurve } from '../domain/rules/debrief';
+import { briefingChip, briefingInfo, creepInfo, debriefBreakers, debriefFamilies, debriefTowers, debriefWaves, elementsLabel, FAMILY_LABEL, fmt0, fmt1, fmtM, nextWaveInfo, TARGET_LABEL, towerInfo } from './describe';
 
 const KEYS = ['q', 'w', 'e', 'r', 'a', 's', 'd', 'f', 'z', 'x', 'c', 'v'];
 const TARGET_ORDER: TargetMode[] = ['first', 'last', 'strong', 'weak', 'close'];
@@ -873,11 +874,30 @@ export class Game {
           <div><b>${fmt0(s.longestMaze)}</b><span>Plus long trajet</span></div>
           <div><b>${fmt0(s.goldEarned)}</b><span>Or gagné</span></div>
         </div>
+        <div class="debrief-tabs" role="tablist">
+          <button type="button" class="debrief-tab active" data-tab="towers">Tours</button>
+          <button type="button" class="debrief-tab" data-tab="families">Familles</button>
+          <button type="button" class="debrief-tab" data-tab="waves">Vagues</button>
+          <button type="button" class="debrief-tab" data-tab="breakers">Briseurs</button>
+        </div>
+        <div class="debrief-panel" data-panel="towers">${debriefTowers(towerRanking(s.towers.values()))}</div>
+        <div class="debrief-panel" data-panel="families" hidden>${debriefFamilies(familyDamage(s.towers.values()))}</div>
+        <div class="debrief-panel" data-panel="waves" hidden>${debriefWaves(waveCurve(s.waves, w.gold))}</div>
+        <div class="debrief-panel" data-panel="breakers" hidden>${debriefBreakers(breakerLosses(s.towers.values()))}</div>
         <div class="row">
           ${win ? '<button type="button" class="btn primary" id="endless">Continuer en mode infini</button>' : ''}
           <button type="button" class="btn ${win ? '' : 'primary'}" id="again">Nouvelle partie</button>
         </div>
       </div>`);
+    for (const tab of document.querySelectorAll<HTMLButtonElement>('.debrief-tab')) {
+      tab.addEventListener('click', () => {
+        for (const t of document.querySelectorAll('.debrief-tab')) t.classList.remove('active');
+        tab.classList.add('active');
+        for (const panel of document.querySelectorAll<HTMLElement>('.debrief-panel')) {
+          panel.hidden = panel.dataset.panel !== tab.dataset.tab;
+        }
+      });
+    }
     $('again').addEventListener('click', () => this.showStart());
     if (win) {
       $('endless').addEventListener('click', () => {

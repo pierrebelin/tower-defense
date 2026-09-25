@@ -41,4 +41,14 @@ describe('build', () => {
     expect(last.ok).toBe(false);
     expect(Number.isFinite(w.mazeLength())).toBe(true);
   });
+
+  it('[RM-01] inscrit la tour posée au registre, en place', () => {
+    const w = newWorld();
+    const built = dispatch(w, { c: 'build', def: 'archer', x: 10, y: 8 }) as { ok: true; id: number };
+
+    expect(w.stats.towers.size).toBe(1);
+    const entry = w.stats.towers.get(built.id)!;
+    expect(entry.fate).toBe('standing');
+    expect(entry.def.name).toBe("Tour d'archers");
+  });
 });

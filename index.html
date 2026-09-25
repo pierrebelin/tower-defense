@@ -174,6 +174,19 @@
   .endstats div { background: var(--slot); border: 1px solid var(--line-soft); border-radius: 4px; padding: 8px 10px; }
   .endstats b { display: block; font: 700 26px var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
   .endstats span { font: 500 13px var(--caps); color: var(--text-dim); letter-spacing: 0.03em; }
+  .debrief-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line-soft); margin-bottom: 10px; }
+  .debrief-tab { background: none; border: 1px solid transparent; border-bottom: none; color: var(--text-dim); font: 500 13px var(--caps); letter-spacing: 0.03em; padding: 6px 12px; cursor: pointer; border-radius: 4px 4px 0 0; }
+  .debrief-tab:hover { color: var(--text); }
+  .debrief-tab.active { color: var(--gold); border-color: var(--line-soft); background: var(--slot); }
+  .debrief-panel { max-height: 220px; overflow-y: auto; margin-bottom: 16px; }
+  table.debrief-towers, table.debrief-waves { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 14px; }
+  table.debrief-towers th, table.debrief-towers td, table.debrief-waves th, table.debrief-waves td { border: 1px solid var(--line-soft); padding: 4px 8px; text-align: right; }
+  table.debrief-towers th:first-child, table.debrief-towers td:first-child, table.debrief-waves th:first-child, table.debrief-waves td:first-child { text-align: left; }
+  table.debrief-towers th, table.debrief-waves th { font: 500 12px var(--caps); color: var(--text-dim); letter-spacing: 0.03em; }
+  .debrief-family { display: grid; grid-template-columns: 100px 1fr auto auto; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; color: var(--text-dim); }
+  .debrief-family span:last-child, .debrief-family span:nth-child(3) { font-variant-numeric: tabular-nums; color: var(--text); }
+  .debrief-bar { height: 10px; background: var(--gold); border-radius: 2px; }
+  .debrief-breakers { margin: 0; color: var(--text-dim); }
   .table-wrap { overflow-x: auto; margin: 6px 0 16px; }
   table.armor { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; min-width: 520px; }
   table.armor th, table.armor td { border: 1px solid var(--line-soft); padding: 4px 8px; text-align: center; }

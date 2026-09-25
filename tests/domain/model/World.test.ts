@@ -198,4 +198,140 @@ describe('World', () => {
     ];
     expected.forEach((v, i) => expect(w.airRest[i]).toBeCloseTo(v));
   });
+
+  it('[RM-04] note les vies perdues de la vague quand ses créatures s’échappent', () => {
+    const w = newWorld();
+    dispatch(w, { c: 'callWave' });
+    const before = w.lives;
+    for (let i = 0; i < 60 * 90 && w.stats.leaked === 0; i++) w.step();
+    expect(w.stats.waves[0].livesLost).toBe(before - w.lives);
+  });
+
+  it('[RM-04] note l’or possédé après prime et intérêts quand la vague se termine', () => {
+    const w = newWorld();
+    dispatch(w, { c: 'callWave' });
+    for (let i = 0; i < 60 * 300 && w.stats.waves[0]?.gold === null; i++) w.step();
+    expect(w.stats.waves[0].gold).toBe(w.gold);
+  });
+
+  it('[RM-04] impute l’évasion à la vague de la créature quand deux vagues se chevauchent', () => {
+    const w = newWorld();
+    dispatch(w, { c: 'callWave' });
+    dispatch(w, { c: 'callWave' });
+    w.lives = 1_000_000;
+    const before = w.lives;
+    for (let i = 0; i < 60 * 600 && (w.pending.has(0) || w.pending.has(1)); i++) w.step();
+    expect(w.pending.has(0)).toBe(false);
+    expect(w.pending.has(1)).toBe(false);
+    expect(w.stats.waves[0].livesLost).toBeGreaterThan(0);
+    expect(w.stats.waves[1].livesLost).toBeGreaterThan(0);
+    expect(w.stats.waves[0].livesLost + w.stats.waves[1].livesLost).toBe(before - w.lives);
+  });
+
+  it('[RM-04] laisse l’or non renseigné et garde les vies perdues quand la vague est en cours à la défaite', () => {
+    const w = newWorld();
+    dispatch(w, { c: 'callWave' });
+    w.lives = 1;
+    for (let i = 0; i < 60 * 90 && w.phase !== 'defeat'; i++) w.step();
+    expect(w.phase).toBe('defeat');
+    expect(w.stats.waves[0].gold).toBeNull();
+    expect(w.stats.waves[0].livesLost).toBeGreaterThan(0);
+  });
+
+  it('[RM-06] produit le même registre de tours et le même décompte de vagues quand la partie est rejouée depuis le journal', () => {
+    const a = newWorld('normal', 99);
+    const archer = dispatch(a, { c: 'build', def: 'archer', x: 8, y: 3 }) as { ok: true; id: number };
+    expect(archer.ok).toBe(true);
+    const cannon = dispatch(a, { c: 'build', def: 'cannon', x: 12, y: 3 }) as { ok: true; id: number };
+    expect(cannon.ok).toBe(true);
+    run(a, 3);
+    dispatch(a, { c: 'callWave' });
+    run(a, 60);
+    expect(dispatch(a, { c: 'upgrade', tower: cannon.id, def: 'mortar' }).ok).toBe(true);
+    expect(dispatch(a, { c: 'sell', tower: archer.id }).ok).toBe(true);
+    dispatch(a, { c: 'callWave' });
+    run(a, 400);
+
+    const toRegistry = (w: World) =>
+      [...w.stats.towers.entries()]
+        .sort(([idA], [idB]) => idA - idB)
+        .map(([id, t]) => ({ id, fate: t.fate, name: t.def.name, damage: Math.round(t.damage), kills: t.kills, spent: t.spent }));
+
+    const aRegistry = toRegistry(a);
+    const aWaves = a.stats.waves;
+    expect(aRegistry.length).toBeGreaterThan(0);
+    expect(aRegistry.some((t) => t.fate === 'sold')).toBe(true);
+    expect(aRegistry.some((t) => t.damage > 0)).toBe(true);
+    expect(aWaves.length).toBeGreaterThan(0);
+    expect(aWaves.some((w) => w.livesLost > 0)).toBe(true);
+    expect(aWaves.some((w) => w.gold !== null)).toBe(true);
+
+    const b = newWorld('normal', 99);
+    const log = [...a.log];
+    while (b.tick < a.tick) {
+      while (log.length && log[0].tick === b.tick) dispatch(b, log.shift()!.cmd);
+      b.step();
+    }
+
+    expect(toRegistry(b)).toEqual(aRegistry);
+    expect(b.stats.waves).toEqual(aWaves);
+  });
+
+  it('[RM-04] ne compte pas plus de vies perdues que les vies restantes', () => {
+    // Vies ne changent rien au déroulement (défaite mise à part) : on peut donc
+    // chercher, sur une partie sans défaite, le premier tick où une fuite coûte
+    // plus d'une vie, puis reproduire ce tick avec 1 seule vie restante.
+    const probe = newWorld();
+    probe.lives = 1_000_000;
+    let before = probe.lives;
+    let targetTick = -1;
+    let leak = 0;
+    for (let i = 0; i < 60 * 20000 && targetTick < 0; i++) {
+      probe.step();
+      const delta = before - probe.lives;
+      if (delta > 1) {
+        targetTick = probe.tick;
+        leak = delta;
+      }
+      before = probe.lives;
+    }
+    expect(targetTick).toBeGreaterThan(0);
+    expect(leak).toBeGreaterThan(1);
+
+    const w = newWorld();
+    w.lives = 1_000_000;
+    while (w.tick < targetTick - 1) w.step();
+    w.lives = 1;
+    const totalBefore = w.stats.waves.reduce((sum, t) => sum + t.livesLost, 0);
+    w.step();
+    const totalAfter = w.stats.waves.reduce((sum, t) => sum + t.livesLost, 0);
+
+    expect(totalAfter - totalBefore).toBe(1);
+  });
+
+  it('[RM-04] ne compte aucune vie perdue au-delà de la défaite quand plusieurs créatures s’échappent au même tick', () => {
+    const w = newWorld();
+    dispatch(w, { c: 'callWave' });
+    for (let i = 0; i < 60 * 5 && w.creeps.length === 0; i++) w.step();
+    // Place trois créatures pile sur la case de sortie : elles s'échappent
+    // toutes au même tick, quelle que soit leur vitesse.
+    const proto = w.creeps[0];
+    const exitCell = w.grid.exitCells[0];
+    proto.leg = 1;
+    proto.tx = w.grid.cx(exitCell);
+    proto.ty = w.grid.cy(exitCell);
+    proto.x = proto.tx + 0.5;
+    proto.y = proto.ty + 0.5;
+    for (let k = 0; k < 2; k++) w.creeps.push({ ...proto, id: w.id(), alive: true });
+
+    w.lives = 1;
+    const leakedBefore = w.stats.leaked;
+    const sum = () => w.stats.waves.reduce((s, t) => s + t.livesLost, 0);
+    const totalBefore = sum();
+
+    w.step();
+
+    expect(w.stats.leaked - leakedBefore).toBeGreaterThanOrEqual(3);
+    expect(sum() - totalBefore).toBe(1);
+  });
 });

@@ -72,6 +72,8 @@ function advanceLeg(world: World, c: Creep): boolean {
     return true;
   }
   c.alive = false;
+  const tally = world.stats.waves[c.wave];
+  if (tally) tally.livesLost += Math.max(0, Math.min(c.def.leak, world.lives));
   world.lives -= c.def.leak;
   world.stats.leaked++;
   world.creepGone(c);

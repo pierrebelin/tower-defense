@@ -6,7 +6,7 @@ import { updateCombat, updateProjectiles } from '../systems/combat';
 import { updateMovement } from '../systems/movement';
 import { updateStatuses } from '../systems/status';
 import { updateWaves, type Spawner } from '../systems/waves';
-import type { Command, Creep, Difficulty, GameEvent, MapDef, Phase, Projectile, Tower } from './types';
+import type { Command, Creep, Difficulty, GameEvent, MapDef, Phase, Projectile, Tower, WaveTally } from './types';
 
 export const TICK = 1 / 60;
 export const FIRST_WAVE_DELAY = 35;
@@ -23,6 +23,8 @@ export interface Stats {
   goldEarned: number;
   towersBuilt: number;
   longestMaze: number;
+  towers: Map<number, Tower>;
+  waves: WaveTally[];
 }
 
 /**
@@ -59,7 +61,7 @@ export class World {
   projectiles: Projectile[] = [];
   events: GameEvent[] = [];
   readonly log: { tick: number; cmd: Command }[] = [];
-  stats: Stats = { kills: 0, leaked: 0, goldEarned: 0, towersBuilt: 0, longestMaze: 0 };
+  stats: Stats = { kills: 0, leaked: 0, goldEarned: 0, towersBuilt: 0, longestMaze: 0, towers: new Map(), waves: [] };
 
   /** Longueur restante estimée après chaque tronçon (pour le ciblage). */
   legRest: number[] = [];

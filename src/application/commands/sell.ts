@@ -8,6 +8,7 @@ export function sell(world: World, cmd: Extract<Command, { c: 'sell' }>): Result
   if (!t) return fail('Tour introuvable.');
   const refund = refundValue(t);
   world.gold += refund;
+  t.fate = 'sold';
   world.towers = world.towers.filter((o) => o !== t);
   world.towerById.delete(t.id);
   for (const i of world.grid.footprint(t.x, t.y)) world.grid.tower[i] = 0;
