@@ -1,7 +1,9 @@
 import type { CellKind, MapDef } from './types';
 
 const KIND: Record<string, CellKind> = {
-  '.': 'build', '#': 'rock', S: 'spawn', '1': 'checkpoint', E: 'exit', '~': 'road',
+  '.': 'build', '#': 'rock', S: 'spawn', E: 'exit', '~': 'road',
+  '1': 'checkpoint', '2': 'checkpoint', '3': 'checkpoint', '4': 'checkpoint', '5': 'checkpoint',
+  '6': 'checkpoint', '7': 'checkpoint', '8': 'checkpoint', '9': 'checkpoint',
 };
 
 /** Grille logique : nature du terrain et occupation par les tours (2×2 cases). */
@@ -12,7 +14,8 @@ export class Grid {
   /** Identifiant de la tour occupant la case, 0 si libre. */
   readonly tower: Int32Array;
   readonly spawnCells: number[] = [];
-  readonly checkpointCells: number[] = [];
+  /** Cases des pierres runiques, indexées par ordre (`checkpoints[0]` = pierre 1). */
+  readonly checkpoints: number[][] = [];
   readonly exitCells: number[] = [];
 
   constructor(map: MapDef) {
@@ -29,7 +32,10 @@ export class Grid {
         const i = this.idx(x, y);
         this.kind[i] = k;
         if (k === 'spawn') this.spawnCells.push(i);
-        if (k === 'checkpoint') this.checkpointCells.push(i);
+        if (k === 'checkpoint') {
+          const n = Number(ch) - 1;
+          (this.checkpoints[n] ??= []).push(i);
+        }
         if (k === 'exit') this.exitCells.push(i);
       });
     });

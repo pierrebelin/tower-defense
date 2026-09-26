@@ -107,6 +107,9 @@ export class Sfx {
           this.tone(1200, 0.08, 'square', 0.06);
           this.tone(1600, 0.1, 'square', 0.06, undefined, 0.06);
           break;
+        case 'destroyed':
+          this.noise(0.18, 0.5, 600);
+          break;
         case 'waveStart':
           // Cor de guerre : deux quintes superposées.
           this.tone(e.boss ? 98 : 147, 0.9, 'sawtooth', 0.12);

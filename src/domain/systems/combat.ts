@@ -2,6 +2,7 @@ import { damageMultiplier } from '../rules/Damage';
 import type { World } from '../model/World';
 import type { AttackDef, AttackType, Creep, TargetMode, Tower } from '../model/types';
 import { applyOnHit } from './status';
+import { spawnOffspring } from './waves';
 
 export function canTarget(a: AttackDef, c: Creep): boolean {
   if (!c.alive) return false;
@@ -127,7 +128,12 @@ export function updateProjectiles(world: World, dt: number): void {
   }
 }
 
-function hitCreep(world: World, towerId: number, defId: string, a: AttackDef, c: Creep, raw: number): void {
+export function hitCreep(world: World, towerId: number, defId: string, a: AttackDef, c: Creep, raw: number): void {
+  if (c.shield > 0) {
+    c.shield--;
+    return;
+  }
+  if (c.def.sprint && c.sprint <= 0 && c.sprintCooldown <= 0) c.sprint = c.def.sprint.duration;
   applyOnHit(world, c, a, towerId, defId);
   applyDamage(world, c, raw, a.type, towerId, false);
 }
@@ -140,6 +146,13 @@ export function applyDamage(world: World, c: Creep, raw: number, type: AttackTyp
   if (!ignoreArmorValue) c.hitFlash = 0.08;
   const tower = world.stats.towers.get(towerId);
   if (tower) tower.damage += Math.min(dmg, dmg + c.hp);
+  if (c.def.brood) {
+    // Seuils décroissants : dès qu'un seuil n'est pas franchi, les suivants (plus bas) non plus.
+    for (let i = c.brood; i < c.def.brood.below.length && c.hp < c.def.brood.below[i] * c.maxHp; i++) {
+      spawnOffspring(world, c, c.def.brood.creep, c.def.brood.count);
+      c.brood++;
+    }
+  }
   if (c.hp <= 0) {
     c.alive = false;
     c.hp = 0;
@@ -147,6 +160,7 @@ export function applyDamage(world: World, c: Creep, raw: number, type: AttackTyp
     world.stats.kills++;
     if (tower) tower.kills++;
     world.creepGone(c);
+    if (c.def.split) spawnOffspring(world, c, c.def.split.creep, c.def.split.count);
     world.emit({ t: 'kill', x: c.x, y: c.y, bounty: c.bounty, creepId: c.id, boss: !!c.def.boss });
   }
   return dmg;

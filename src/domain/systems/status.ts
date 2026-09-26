@@ -20,6 +20,16 @@ export function updateStatuses(world: World, dt: number): void {
     } else if (c.freezeGuard > 0) {
       c.freezeGuard -= dt;
     }
+    if (c.sprint > 0) {
+      c.sprint -= dt;
+      if (c.sprint <= 0) {
+        c.sprint = 0;
+        c.sprintCooldown = c.def.sprint!.cooldown;
+      }
+    } else if (c.sprintCooldown > 0) {
+      c.sprintCooldown -= dt;
+      if (c.sprintCooldown < 1e-9) c.sprintCooldown = 0;
+    }
     if (c.def.regen) c.hp = Math.min(c.maxHp, c.hp + c.maxHp * c.def.regen * dt);
     for (const p of c.poisons) {
       p.t -= dt;

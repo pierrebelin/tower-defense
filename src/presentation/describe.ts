@@ -1,8 +1,9 @@
-import type { WaveBriefing } from '../application/queries/waveBriefing';
+import type { WaveBriefing, WaveBriefingGroup } from '../application/queries/waveBriefing';
 import { ARMOR_LABEL, ATTACK_LABEL, ATTACK_TABLE } from '../domain/rules/Damage';
 import type { ArmorType, AttackType, Creep, CreepDef, TargetMode, Tower, TowerDef, TowerFate } from '../domain/model/types';
 import type { breakerLosses, familyDamage, waveCurve } from '../domain/rules/debrief';
 import { towerYield } from '../domain/rules/debrief';
+import { creepSpeed } from '../domain/rules/speed';
 
 // Textes du panneau d'information. Tout est échappé : les seules données
 // injectées viennent des fichiers de données du jeu.
@@ -112,33 +113,45 @@ function waveHint(def: CreepDef): string {
   return hint;
 }
 
-const waveName = (b: WaveBriefing) => (b.creep.boss ? b.creep.name : b.creep.plural);
+const waveName = (g: WaveBriefingGroup) => (g.creep.boss ? g.creep.name : g.creep.plural);
+
+function nextWaveGroup(g: WaveBriefingGroup): string {
+  const count = g.count > 1 ? ` ×${g.count}` : '';
+  return `<div>${esc(waveName(g))}${count}</div>
+      <div class="stats">${stat('PV', fmt0(g.hp))}${stat('Vitesse', fmt1(g.creep.speed))}${stat('Butin', `${g.bounty} or`)}</div>
+      <div>${creepTags(g.creep)}</div>`;
+}
 
 export function nextWaveInfo(b: WaveBriefing | null): string {
   if (!b) return `<h3>Dernière vague lancée</h3><p>Tenez jusqu'à ce que la dernière créature tombe.</p>`;
-  const count = b.count > 1 ? ` ×${b.count}` : '';
-  return `<h3>Prochaine vague ${b.wave + 1} · ${esc(waveName(b))}${count}</h3>
-    <div class="stats">${stat('PV', fmt0(b.hp))}${stat('Vitesse', fmt1(b.creep.speed))}${stat('Butin', `${b.bounty} or`)}</div>
-    <div>${creepTags(b.creep)}</div>
-    <p>${esc(waveHint(b.creep))}</p>`;
+  return `<h3>Prochaine vague ${b.wave + 1}</h3>
+      ${b.groups.map(nextWaveGroup).join('')}
+      <p>${esc(waveHint(b.groups[0].creep))}</p>`;
 }
 
-/** Résumé d'une ligne dans la barre du haut : « 12 Harpies · volants ». */
-export function briefingChip(b: WaveBriefing): string {
-  const traits = [b.creep.air && 'volants', b.creep.magicImmune && 'immunisés', b.creep.boss && 'chef'].filter(Boolean);
-  const who = b.count > 1 ? `${b.count} ${b.creep.plural}` : b.creep.name;
+function briefingEntry(g: WaveBriefingGroup): string {
+  const traits = [g.creep.air && 'volants', g.creep.magicImmune && 'immunisés', g.creep.boss && 'chef'].filter(Boolean);
+  const who = g.count > 1 ? `${g.count} ${g.creep.plural}` : g.creep.name;
   return `<b>${esc(who)}</b>${traits.length ? ` · ${traits.join(' · ')}` : ''}`;
 }
 
-/** Détail de la prochaine vague, déroulé au survol du résumé. */
+/** Résumé d'une ligne dans la barre du haut : « 12 Harpies · volants ». Un groupe par entrée. */
+export function briefingChip(b: WaveBriefing): string {
+  return b.groups.map(briefingEntry).join(' · ');
+}
+
+function briefingGroupInfo(g: WaveBriefingGroup): string {
+  const who = g.creep.boss ? `Chef : ${g.creep.name}` : g.count > 1 ? `${g.count} ${g.creep.plural}` : g.creep.name;
+  const hp = g.count > 1 ? `${fmt0(g.hp)} PV chacun · ${fmt0(g.hp * g.count)} au total` : `${fmt0(g.hp)} PV`;
+  return `<h3>${esc(who)}</h3>
+    <div>${creepTags(g.creep)}</div>
+    <p class="facts">${hp} · vitesse ${fmt1(g.creep.speed)} · butin ${g.bounty} or</p>
+    <p>${esc(waveHint(g.creep))}</p>`;
+}
+
+/** Détail de la prochaine vague, déroulé au survol du résumé. Une section par groupe. */
 export function briefingInfo(b: WaveBriefing): string {
-  const who = b.count > 1 ? `${b.count} ${b.creep.plural}` : `Chef : ${b.creep.name}`;
-  const hp = b.count > 1 ? `${fmt0(b.hp)} PV chacun · ${fmt0(b.hp * b.count)} au total` : `${fmt0(b.hp)} PV`;
-  return `<div class="when">Vague ${b.wave + 1}</div>
-    <h3>${esc(who)}</h3>
-    <div>${creepTags(b.creep)}</div>
-    <p class="facts">${hp} · vitesse ${fmt1(b.creep.speed)} · butin ${b.bounty} or</p>
-    <p>${esc(waveHint(b.creep))}</p>`;
+  return `<div class="when">Vague ${b.wave + 1}</div>${b.groups.map(briefingGroupInfo).join('')}`;
 }
 
 /** Effets en cours sur une créature (ralentissement, corrosion, poison). */
@@ -198,7 +211,7 @@ export function debriefBreakers(losses: ReturnType<typeof breakerLosses>): strin
 export function creepInfo(c: Creep): string {
   const effects = creepEffects(c).map((e) => `<span class="tag good">${esc(e)}</span>`).join('');
   return `<h3>${esc(c.def.name)} · vague ${c.wave + 1}</h3>
-    <div class="stats">${stat('PV', `${fmt0(c.hp)} / ${fmt0(c.maxHp)}`)}${stat('Vitesse', fmt1(c.def.speed * (1 - c.slowPct)))}${stat('Armure', fmt0(c.def.armor - c.shred))}</div>
+    <div class="stats">${stat('PV', `${fmt0(c.hp)} / ${fmt0(c.maxHp)}`)}${stat('Vitesse', fmt1(creepSpeed(c)))}${stat('Armure', fmt0(c.def.armor - c.shred))}</div>
     <div>${creepTags(c.def)}</div>
     ${effects ? `<div>${effects}</div>` : ''}
     <p>${esc(`Le plus efficace : ${counters(c.def)}.`)}</p>`;

@@ -93,3 +93,12 @@ construit un vrai labyrinthe fait nettement mieux : Légende est pensée pour lu
 - Éditeur de cartes : la carte est un tableau de chaînes.
 - Enregistrement et relecture de parties à partir de `world.log`.
 - Rendu PixiJS pour des milliers de particules, sprites dessinés à la main.
+
+## Esprit du projet
+
+Dédale TD est un projet pour le plaisir, fait pour jouer entre amis, et entièrement
+*vibe codé*. Il ne cherche pas à appliquer des pratiques industrielles : le but est
+d'apporter vite de la valeur, c'est-à-dire de pouvoir jouer, en évitant les complexités
+d'un code de production (pas de CI, de déploiement, de surveillance ni de compatibilité
+à maintenir). L'architecture et les tests ne servent qu'à garder le jeu facile à faire
+évoluer.

@@ -61,6 +61,16 @@ export interface CreepDef {
   leak: number;
   radius: number;
   bountyFactor: number;
+  shield?: number;
+  sprint?: { mult: number; duration: number; cooldown: number };
+  fury?: { below: number; mult: number };
+  heal?: { pct: number; radius: number; every: number };
+  /** Créature et nombre engendrés à la mort (pas à la sortie). */
+  split?: { creep: string; count: number };
+  /** Rejetons engendrés à chaque seuil de PV franchi (pas à la mort). */
+  brood?: { creep: string; count: number; below: number[] };
+  /** Cycle charge → armé → recharge du Sapeur gobelin (secondes, portée en cases). */
+  breaker?: { charge: number; armed: number; cooldown: number; range: number };
 }
 
 export interface WaveTally {
@@ -68,16 +78,23 @@ export interface WaveTally {
   gold: number | null;
 }
 
-export interface WaveDef {
+export interface WaveGroup {
   creep: string;
   count: number;
   /** Secondes entre deux apparitions. */
   interval: number;
+  /** Secondes avant la première apparition du groupe. */
+  delay: number;
+}
+
+export interface WaveDef {
+  groups: WaveGroup[];
 }
 
 export type CellKind = 'build' | 'rock' | 'spawn' | 'checkpoint' | 'exit' | 'road';
 
 export interface MapDef {
+  id: string;
   name: string;
   width: number;
   height: number;
@@ -103,12 +120,20 @@ export interface Creep {
   poisons: { dps: number; t: number; towerId: number; defId: string }[];
   frozen: number;
   freezeGuard: number;
+  shield: number;
+  sprint: number;
+  sprintCooldown: number;
+  healTimer: number;
   alive: boolean;
   /** Distance restante estimée jusqu'à la sortie (pour le ciblage « premier »). */
   remaining: number;
   bob: number;
   hitFlash: number;
   bounty: number;
+  /** Nombre de seuils de `brood` déjà franchis. */
+  brood: number;
+  /** État du cycle du Sapeur gobelin (absent si sa définition n'a pas `breaker`). */
+  breaker?: { phase: 'charge' | 'armed' | 'cooldown'; timer: number };
 }
 
 export type TowerFate = 'standing' | 'sold' | 'destroyed';
@@ -156,6 +181,7 @@ export type GameEvent =
   | { t: 'built'; towerId: number; x: number; y: number }
   | { t: 'upgraded'; towerId: number }
   | { t: 'sold'; x: number; y: number; refund: number }
+  | { t: 'destroyed'; x: number; y: number }
   | { t: 'waveStart'; wave: number; creep: string; boss: boolean }
   | { t: 'waveCleared'; wave: number; bonus: number; interest: number }
   | { t: 'victory' }

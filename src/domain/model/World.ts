@@ -2,6 +2,7 @@ import { Rng } from '../Rng';
 import { CAMPAIGN_LENGTH, DIFFICULTY } from '../catalog/creeps';
 import { FlowField } from '../rules/FlowField';
 import { Grid } from './Grid';
+import { updateAbilities } from '../systems/abilities';
 import { updateCombat, updateProjectiles } from '../systems/combat';
 import { updateMovement } from '../systems/movement';
 import { updateStatuses } from '../systems/status';
@@ -36,7 +37,7 @@ export class World {
   readonly grid: Grid;
   readonly rng: Rng;
   readonly difficulty: Difficulty;
-  /** Un champ par tronçon : apparition → pierre runique, pierre runique → sortie. */
+  /** Un champ par tronçon : une pierre runique après l'autre, dans l'ordre, puis la sortie. */
   readonly fields: FlowField[];
   readonly spawnCenter: { x: number; y: number };
   readonly waypoints: { x: number; y: number }[];
@@ -56,14 +57,16 @@ export class World {
 
   towers: Tower[] = [];
   creeps: Creep[] = [];
+  /** Rejetons nés d'un coup (scission) : rejoignent `creeps` en fin de `step()`. */
+  offspring: Creep[] = [];
   projectiles: Projectile[] = [];
   events: GameEvent[] = [];
   readonly log: { tick: number; cmd: Command }[] = [];
   stats: Stats = { kills: 0, leaked: 0, goldEarned: 0, towersBuilt: 0, longestMaze: 0, towers: new Map(), waves: [] };
 
   /** Longueur restante estimée après chaque tronçon (pour le ciblage). */
-  legRest: number[] = [0, 0];
-  airRest: number[] = [0, 0];
+  legRest: number[] = [];
+  airRest: number[] = [];
   private nextId = 1;
   towerById = new Map<number, Tower>();
 
@@ -75,14 +78,20 @@ export class World {
     this.gold = d.gold;
     this.lives = d.lives;
     this.fields = [
-      new FlowField(this.grid, this.grid.checkpointCells),
+      ...this.grid.checkpoints.map((cells) => new FlowField(this.grid, cells)),
       new FlowField(this.grid, this.grid.exitCells),
     ];
     this.spawnCenter = this.grid.regionCenter(this.grid.spawnCells);
-    this.waypoints = [this.grid.regionCenter(this.grid.checkpointCells), this.grid.regionCenter(this.grid.exitCells)];
-    const a = this.waypoints[0];
-    const b = this.waypoints[1];
-    this.airRest = [Math.hypot(a.x - b.x, a.y - b.y), 0];
+    this.waypoints = [
+      ...this.grid.checkpoints.map((cells) => this.grid.regionCenter(cells)),
+      this.grid.regionCenter(this.grid.exitCells),
+    ];
+    this.airRest = new Array(this.waypoints.length).fill(0);
+    for (let k = this.waypoints.length - 2; k >= 0; k--) {
+      const a = this.waypoints[k];
+      const b = this.waypoints[k + 1];
+      this.airRest[k] = this.airRest[k + 1] + Math.hypot(a.x - b.x, a.y - b.y);
+    }
     this.refreshPaths();
   }
 
@@ -102,9 +111,17 @@ export class World {
 
   refreshPaths(): void {
     for (const f of this.fields) f.compute();
-    this.legRest[0] = this.minDist(this.fields[1], this.grid.checkpointCells);
-    this.legRest[1] = 0;
+    this.updateLegRest();
     this.stats.longestMaze = Math.max(this.stats.longestMaze, this.mazeLength());
+  }
+
+  /** Recalcule la distance restante après chaque tronçon, à partir des champs déjà calculés. */
+  updateLegRest(): void {
+    const n = this.fields.length;
+    this.legRest = new Array(n).fill(0);
+    for (let k = n - 2; k >= 0; k--) {
+      this.legRest[k] = this.legRest[k + 1] + this.minDist(this.fields[k + 1], this.grid.checkpoints[k]);
+    }
   }
 
   /** Longueur du trajet terrestre complet, en cases. */
@@ -118,12 +135,16 @@ export class World {
     return m;
   }
 
-  /** Cases du trajet terrestre actuel (pour l'aperçu du chemin). */
+  /** Cases du trajet terrestre actuel (pour l'aperçu du chemin), un tracé par tronçon. */
   groundRoute(): number[][] {
-    const leg0 = this.fields[0].trace(this.spawnCell);
-    const arrival = leg0[leg0.length - 1];
-    const leg1 = arrival !== undefined ? this.fields[1].trace(arrival) : [];
-    return [leg0, leg1];
+    const routes: number[][] = [];
+    let from: number | undefined = this.spawnCell;
+    for (const field of this.fields) {
+      const leg: number[] = from !== undefined ? field.trace(from) : [];
+      routes.push(leg);
+      from = leg[leg.length - 1];
+    }
+    return routes;
   }
 
   emit(e: GameEvent): void {
@@ -148,11 +169,24 @@ export class World {
     this.time += dt;
     updateWaves(this, dt);
     updateStatuses(this, dt);
+    updateAbilities(this, dt);
     updateMovement(this, dt);
     updateCombat(this, dt);
     updateProjectiles(this, dt);
+    if (this.offspring.length) {
+      this.creeps.push(...this.offspring);
+      this.offspring = [];
+    }
     this.creeps = this.creeps.filter((c) => c.alive);
     this.projectiles = this.projectiles.filter((p) => p.alive);
+  }
+
+  /** Retire une tour de la partie (vente ou destruction) : libère son emprise et recalcule les trajets. */
+  removeTower(t: Tower): void {
+    this.towers = this.towers.filter((o) => o !== t);
+    this.towerById.delete(t.id);
+    for (const i of this.grid.footprint(t.x, t.y)) this.grid.tower[i] = 0;
+    this.refreshPaths();
   }
 
   /** Une créature disparaît (tuée ou arrivée) : met à jour le décompte de sa vague. */

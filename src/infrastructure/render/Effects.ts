@@ -47,6 +47,9 @@ export class Effects {
           this.floaters.push({ x: e.x, y: e.y - 0.5, text: `+${e.refund}`, color: PAL.gold, life: 1, big: false });
           this.burst(e.x, e.y, 10, PAL.stone, 1.5);
           break;
+        case 'destroyed':
+          this.burst(e.x, e.y, 10, PAL.stone, 1.5);
+          break;
         case 'waveStart': {
           const def = CREEPS[e.creep];
           const flags = [def.air ? 'volants' : '', def.magicImmune ? 'immunisés à la magie' : '', def.regen && !def.boss ? 'régénération' : '']

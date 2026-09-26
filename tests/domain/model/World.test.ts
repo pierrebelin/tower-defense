@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { dispatch } from '../../../src/application/dispatch';
 import { MAP_CROSSING } from '../../../src/domain/catalog/map';
 import { World } from '../../../src/domain/model/World';
+import { spawnCreep } from '../../../src/domain/systems/waves';
+import { CREEPS } from '../../../src/domain/catalog/creeps';
+import { creepSpeed } from '../../../src/domain/rules/speed';
 import { newWorld, run } from '../../support/helpers';
+import { MAP_BENT_STONES, MAP_CORRIDOR, MAP_TWO_STONES } from '../../support/maps';
+import { MAP_SEALS, MAP_SPIRAL } from '../../../src/domain/catalog/map';
 
 describe('World', () => {
   it('fait passer les créatures par la pierre runique avant la sortie', () => {
@@ -240,5 +245,163 @@ describe('World', () => {
 
     expect(w.stats.leaked - leakedBefore).toBeGreaterThanOrEqual(3);
     expect(sum() - totalBefore).toBe(1);
+  });
+
+  it('[RM-11] ne scinde pas un Limon qui atteint la sortie', () => {
+    const w = newWorld();
+    const c = spawnCreep(w, 'slime', 0);
+    const exitCell = w.grid.exitCells[0];
+    c.leg = 1;
+    c.tx = w.grid.cx(exitCell);
+    c.ty = w.grid.cy(exitCell);
+    c.x = c.tx + 0.5;
+    c.y = c.ty + 0.5;
+    const leakedBefore = w.stats.leaked;
+
+    w.step();
+
+    expect(w.stats.leaked).toBeGreaterThan(leakedBefore);
+    expect(w.creeps.some((cr) => cr.def.id === 'slimelet')).toBe(false);
+    expect(w.offspring).toHaveLength(0);
+  });
+
+  it('[RM-16] détruit les mêmes tours au même instant quand la graine et le journal sont les mêmes', () => {
+    const play = () => {
+      const w = newWorld('normal', 5);
+      dispatch(w, { c: 'build', def: 'wall', x: 15, y: 9 });
+      dispatch(w, { c: 'build', def: 'wall', x: 19, y: 9 });
+      const sapper = spawnCreep(w, 'sapper', 0);
+      sapper.x = 18;
+      sapper.y = 10;
+      sapper.breaker = { phase: 'armed', timer: 1 / 60 / 2 };
+
+      let destroyedAt: { tick: number; id: number } | null = null;
+      for (let i = 0; i < 60 * 5 && destroyedAt === null; i++) {
+        w.step();
+        for (const [id, t] of w.stats.towers) {
+          if (t.fate === 'destroyed') destroyedAt = { tick: w.tick, id };
+        }
+      }
+      return destroyedAt;
+    };
+
+    const a = play();
+    const b = play();
+
+    expect(a).toEqual(b);
+    expect(a).not.toBeNull();
+  });
+
+  it('[RM-01] fait passer une créature terrestre par la pierre 1 puis la pierre 2 avant la sortie', () => {
+    const w = newWorld('normal', 42, MAP_CORRIDOR);
+    dispatch(w, { c: 'callWave' });
+    const legs: number[] = [];
+    for (let i = 0; i < 60 * 60 && w.stats.leaked === 0; i++) {
+      w.step();
+      const leg = w.creeps[0]?.leg;
+      if (leg !== undefined && legs[legs.length - 1] !== leg) legs.push(leg);
+    }
+    expect(legs).toEqual([0, 1, 2]);
+    expect(w.stats.leaked).toBeGreaterThan(0);
+  });
+
+  it('[RM-01] ne compte pas la pierre 2 quand la créature la traverse avant la pierre 1', () => {
+    const w = newWorld('normal', 42, MAP_CORRIDOR);
+    dispatch(w, { c: 'callWave' });
+    const stone2Cell = w.grid.idx(3, 1);
+    let legAtCrossing: number | null = null;
+    for (let i = 0; i < 60 * 60 && legAtCrossing === null; i++) {
+      w.step();
+      const c = w.creeps[0];
+      if (c && w.grid.idx(c.tx, c.ty) === stone2Cell) legAtCrossing = c.leg;
+    }
+    expect(legAtCrossing).toBe(0);
+  });
+
+  it('[RM-01] mesure le labyrinthe sur les trois tronçons quand la carte a deux pierres', () => {
+    const w = newWorld('normal', 42, MAP_CORRIDOR);
+    // Couloir 1D : spawn(2,1)→pierre 1(4,1) = 2 cases, pierre1→pierre2(3,1) = 1 case,
+    // pierre2→sortie(1,1) = 2 cases.
+    expect(w.mazeLength()).toBe(5);
+  });
+
+  it("[RM-07] rejoue à l'identique une partie à deux pierres quand carte, graine et journal sont les mêmes", () => {
+    const play = () => {
+      const w = newWorld('normal', 17, MAP_TWO_STONES);
+      dispatch(w, { c: 'build', def: 'archer', x: 2, y: 2 });
+      dispatch(w, { c: 'callWave' });
+      run(w, 20);
+      return {
+        gold: w.gold,
+        kills: w.stats.kills,
+        lives: w.lives,
+        tick: w.tick,
+        creeps: w.creeps.map((c) => ({ x: c.x, y: c.y, hp: Math.round(c.hp) })),
+      };
+    };
+    expect(play()).toEqual(play());
+  });
+
+  it('[RM-07] démarre la partie sur la carte passée en paramètre', () => {
+    const spiral = new World({ map: MAP_SPIRAL, difficulty: 'normal', seed: 1 });
+    expect(spiral.grid.w).toBe(MAP_SPIRAL.width);
+    expect(spiral.grid.h).toBe(MAP_SPIRAL.height);
+    expect(spiral.grid.checkpoints).toHaveLength(1);
+    expect(spiral.grid.spawnCells.length).toBeGreaterThan(0);
+    expect(spiral.grid.exitCells.length).toBeGreaterThan(0);
+
+    const seals = new World({ map: MAP_SEALS, difficulty: 'normal', seed: 1 });
+    expect(seals.grid.w).toBe(MAP_SEALS.width);
+    expect(seals.grid.h).toBe(MAP_SEALS.height);
+    expect(seals.grid.checkpoints).toHaveLength(2);
+    expect(seals.grid.spawnCells.length).toBeGreaterThan(0);
+    expect(seals.grid.exitCells.length).toBeGreaterThan(0);
+  });
+
+  it('[RM-02] fait survoler au volant la pierre 1 puis la pierre 2 avant la porte', () => {
+    const w = newWorld('normal', 42, MAP_TWO_STONES);
+    const harpy = spawnCreep(w, 'harpy', 0);
+    expect(CREEPS.harpy.air).toBe(true);
+    const stone1 = w.grid.regionCenter(w.grid.checkpoints[0]);
+    const stone2 = w.grid.regionCenter(w.grid.checkpoints[1]);
+    const legs: number[] = [0];
+    const positionsAtLegChange: { x: number; y: number }[] = [];
+    for (let i = 0; i < 60 * 30 && harpy.alive; i++) {
+      w.step();
+      if (harpy.leg !== legs[legs.length - 1]) {
+        legs.push(harpy.leg);
+        positionsAtLegChange.push({ x: harpy.x, y: harpy.y });
+      }
+    }
+    expect(legs).toEqual([0, 1, 2]);
+    const tickDistance = creepSpeed(harpy) / 60;
+    const stoneGap = Math.hypot(stone2.x - stone1.x, stone2.y - stone1.y);
+    const distToStone1 = Math.hypot(positionsAtLegChange[0].x - stone1.x, positionsAtLegChange[0].y - stone1.y);
+    const distToStone2 = Math.hypot(positionsAtLegChange[1].x - stone2.x, positionsAtLegChange[1].y - stone2.y);
+    expect(distToStone1).toBeLessThanOrEqual(tickDistance);
+    expect(distToStone2).toBeLessThanOrEqual(tickDistance);
+    expect(distToStone1).toBeLessThan(stoneGap);
+    expect(distToStone2).toBeLessThan(stoneGap);
+  });
+
+  it("[RM-02] estime la distance restante d'un volant comme la somme des lignes droites jusqu'à la porte", () => {
+    const w = newWorld('normal', 42, MAP_BENT_STONES);
+    const harpy = spawnCreep(w, 'harpy', 0);
+    const stone1 = w.grid.regionCenter(w.grid.checkpoints[0]);
+    const stone2 = w.grid.regionCenter(w.grid.checkpoints[1]);
+    const exit = w.grid.regionCenter(w.grid.exitCells);
+
+    w.step();
+    expect(harpy.leg).toBe(0);
+    const expectedAtLeg0 =
+      Math.hypot(stone1.x - harpy.x, stone1.y - harpy.y) +
+      Math.hypot(stone2.x - stone1.x, stone2.y - stone1.y) +
+      Math.hypot(exit.x - stone2.x, exit.y - stone2.y);
+    expect(harpy.remaining).toBeCloseTo(expectedAtLeg0, 6);
+
+    for (let i = 0; i < 60 * 5 && harpy.leg < 1; i++) w.step();
+    expect(harpy.leg).toBe(1);
+    const expectedAtLeg1 = Math.hypot(stone2.x - harpy.x, stone2.y - harpy.y) + Math.hypot(exit.x - stone2.x, exit.y - stone2.y);
+    expect(harpy.remaining).toBeCloseTo(expectedAtLeg1, 6);
   });
 });

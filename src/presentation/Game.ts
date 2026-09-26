@@ -1,12 +1,12 @@
 import { Sfx } from '../infrastructure/audio/Sfx';
 import { GameLoop } from '../infrastructure/GameLoop';
 import { CAMPAIGN_LENGTH, CREEPS, DIFFICULTY, waveAt } from '../domain/catalog/creeps';
-import { MAP_CROSSING } from '../domain/catalog/map';
+import { MAPS } from '../domain/catalog/map';
 import { BUILD_MENU, TOWERS } from '../domain/catalog/towers';
 import { Effects } from '../infrastructure/render/Effects';
 import { Renderer, type ViewState } from '../infrastructure/render/Renderer';
 import { PAL } from '../infrastructure/render/palette';
-import { drawCreep, drawTower } from '../infrastructure/render/sprites';
+import { drawCreep, drawMapThumbnail, drawTower } from '../infrastructure/render/sprites';
 import { ARMOR_LABEL, ATTACK_LABEL, ATTACK_TABLE } from '../domain/rules/Damage';
 import { dispatch } from '../application/dispatch';
 import { canBuild } from '../application/queries/canBuild';
@@ -16,13 +16,15 @@ import { waveBriefing } from '../application/queries/waveBriefing';
 import { refundValue, upgradeCost } from '../domain/rules/pricing';
 import { canLaunchNext } from '../domain/systems/waves';
 import { World } from '../domain/model/World';
-import type { ArmorType, AttackType, Creep, Difficulty, GameEvent, TargetMode, Tower } from '../domain/model/types';
+import type { ArmorType, AttackType, Creep, Difficulty, GameEvent, MapDef, TargetMode, Tower } from '../domain/model/types';
 import { breakerLosses, familyDamage, towerRanking, waveCurve } from '../domain/rules/debrief';
+import { importLegacyRecords, withRecord, type RecordBook } from '../domain/rules/records';
 import { briefingChip, briefingInfo, creepInfo, debriefBreakers, debriefFamilies, debriefTowers, debriefWaves, elementsLabel, FAMILY_LABEL, fmt0, fmt1, fmtM, nextWaveInfo, TARGET_LABEL, towerInfo } from './describe';
 
 const KEYS = ['q', 'w', 'e', 'r', 'a', 's', 'd', 'f', 'z', 'x', 'c', 'v'];
 const TARGET_ORDER: TargetMode[] = ['first', 'last', 'strong', 'weak', 'close'];
-const BEST_KEY = 'dedale.best.v1';
+const BEST_KEY = 'dedale.best.v2';
+const LEGACY_BEST_KEY = 'dedale.best.v1';
 
 const ICON_CANCEL = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M11 11l18 18M29 11L11 29" stroke="#e0664f" stroke-width="4" stroke-linecap="round"/></svg>';
 const ICON_HELP = '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="14" fill="none" stroke="#b98d4c" stroke-width="2.5"/><path d="M15.5 16a4.5 4.5 0 119 .5c0 3-4.5 3.5-4.5 6.5" fill="none" stroke="#efe3c4" stroke-width="2.6" stroke-linecap="round"/><circle cx="20" cy="28" r="1.8" fill="#efe3c4"/></svg>';
@@ -52,6 +54,7 @@ export class Game {
   private readonly sfx = new Sfx();
   private readonly loop: GameLoop;
   private difficulty: Difficulty = 'normal';
+  private mapId: string = MAPS[0].id;
 
   private selected: Selection = null;
   private buildDef: string | null = null;
@@ -81,7 +84,7 @@ export class Game {
   private readonly portrait = $<HTMLCanvasElement>('portrait');
 
   constructor() {
-    this.world = this.createWorld('normal');
+    this.world = this.createWorld(MAPS[0], 'normal');
     this.renderer = new Renderer(this.canvas, this.world);
     this.loop = new GameLoop(() => this.stepSim(), (dt) => this.frame(dt));
     this.bindInput();
@@ -91,13 +94,14 @@ export class Game {
     this.loop.start();
   }
 
-  private createWorld(d: Difficulty): World {
-    return new World({ map: MAP_CROSSING, difficulty: d, seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0 });
+  private createWorld(map: MapDef, d: Difficulty): World {
+    return new World({ map, difficulty: d, seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0 });
   }
 
   private newGame(d: Difficulty): void {
     this.difficulty = d;
-    this.world = this.createWorld(d);
+    const map = MAPS.find((m) => m.id === this.mapId) ?? MAPS[0];
+    this.world = this.createWorld(map, d);
     this.renderer.setWorld(this.world);
     this.fx.clear();
     this.selected = null;
@@ -598,9 +602,9 @@ export class Game {
       const i = w.wave + 1;
       if (!w.endless && i >= CAMPAIGN_LENGTH) unit = `<h2>Tenez bon</h2><div class="sub">Dernière vague en cours</div>`;
       else {
-        const wd = waveAt(i);
-        const def = CREEPS[wd.creep];
-        unit = `<h2>${def.boss ? def.name : def.plural}</h2><div class="sub">Vague ${i + 1}${wd.count > 1 ? ` · ×${wd.count}` : ' · chef'}</div><div class="facts">Armure ${ARMOR_LABEL[def.armorType].toLowerCase()}${def.air ? ' · volants' : ''}${def.magicImmune ? ' · immunisés' : ''}</div>`;
+        const wg = waveAt(i).groups[0];
+        const def = CREEPS[wg.creep];
+        unit = `<h2>${def.boss ? def.name : def.plural}</h2><div class="sub">Vague ${i + 1}${wg.count > 1 ? ` · ×${wg.count}` : ' · chef'}</div><div class="facts">Armure ${ARMOR_LABEL[def.armorType].toLowerCase()}${def.air ? ' · volants' : ''}${def.magicImmune ? ' · immunisés' : ''}</div>`;
       }
     }
     if (unit !== this.unitCache) {
@@ -640,7 +644,7 @@ export class Game {
     }
     let creep: Creep | undefined;
     if (this.selected?.kind === 'creep') creep = w.creeps.find((k) => k.id === this.selected!.id);
-    const def = creep ? creep.def : CREEPS[waveAt(Math.min(w.wave + 1, w.endless ? Infinity : CAMPAIGN_LENGTH - 1)).creep];
+    const def = creep ? creep.def : CREEPS[waveAt(Math.min(w.wave + 1, w.endless ? Infinity : CAMPAIGN_LENGTH - 1)).groups[0].creep];
     const span = Math.max(1.4, def.radius * 4.2);
     const s = c.width / span;
     ctx.setTransform(s, 0, 0, s, 0, 0);
@@ -701,9 +705,11 @@ export class Game {
     $('overlay').innerHTML = '';
   }
 
-  private loadBest(): Partial<Record<Difficulty, number>> {
+  private loadBest(): RecordBook {
     try {
-      return JSON.parse(localStorage.getItem(BEST_KEY) ?? '{}') as Partial<Record<Difficulty, number>>;
+      const book = JSON.parse(localStorage.getItem(BEST_KEY) ?? '{}') as RecordBook;
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_BEST_KEY) ?? '{}') as Partial<Record<Difficulty, number>>;
+      return importLegacyRecords(book, legacy, 'crossing');
     } catch {
       return {};
     }
@@ -713,20 +719,16 @@ export class Game {
     const w = this.world;
     const reached = w.phase === 'victory' ? w.wave + 1 : Math.max(0, w.wave);
     try {
-      const best = this.loadBest();
-      if ((best[this.difficulty] ?? 0) < reached) {
-        best[this.difficulty] = reached;
-        localStorage.setItem(BEST_KEY, JSON.stringify(best));
-      }
+      const best = withRecord(this.loadBest(), this.mapId, this.difficulty, reached);
+      localStorage.setItem(BEST_KEY, JSON.stringify(best));
     } catch {
       /* stockage indisponible : on s'en passe */
     }
   }
 
-  private showStart(): void {
-    this.setPaused(true);
-    const best = this.loadBest();
-    const diffs = (Object.keys(DIFFICULTY) as Difficulty[])
+  private diffsHtml(mapId: string): string {
+    const best = this.loadBest()[mapId] ?? {};
+    return (Object.keys(DIFFICULTY) as Difficulty[])
       .map((d) => {
         const D = DIFFICULTY[d];
         const rec = best[d] ? `<span class="record">Record : vague ${best[d]}</span>` : '';
@@ -734,25 +736,51 @@ export class Game {
           <strong>${D.label}</strong><span>${D.lives} vies · ${D.gold} or</span><span>PV des créatures ×${fmt1(D.hp)}</span>${rec}</button>`;
       })
       .join('');
+  }
+
+  private showStart(): void {
+    this.setPaused(true);
+    const maps = MAPS.map(
+      (m) => `<button type="button" class="map" role="radio" data-map="${m.id}" aria-checked="${m.id === this.mapId}">
+        <canvas class="map-thumb" data-thumb="${m.id}" width="64" height="64"></canvas><span>${m.name}</span></button>`,
+    ).join('');
     this.openOverlay('start', `
       <div class="sheet">
         <h1>Dédale</h1>
         <p class="lede">Bâtissez le labyrinthe, tenez la porte. Trente vagues, trois chefs, et un seul chemin que vous dessinez vous-même.</p>
         <ol>
-          <li><b>Les créatures passent par la pierre runique</b> avant de rejoindre la porte : votre champ est traversé deux fois.</li>
+          <li><b>Les créatures passent par les pierres runiques, dans l'ordre</b> avant de rejoindre la porte : votre champ est traversé à chaque tronçon.</li>
           <li><b>Murs à 3 pièces d'or</b> pour allonger leur trajet, transformables ensuite en tours. Le passage ne peut jamais être fermé.</li>
           <li><b>Chaque attaque a ses proies</b> : perçant contre léger, siège contre fortifié, magie contre lourd. Les volants ignorent le labyrinthe.</li>
           <li><b>Remboursement intégral</b> de ce que vous bâtissez avant le lancement de la vague suivante.</li>
         </ol>
+        <p class="label">Carte</p>
+        <div class="maps" role="radiogroup" aria-label="Carte">${maps}</div>
         <p class="label">Difficulté</p>
-        <div class="diffs" role="radiogroup" aria-label="Difficulté">${diffs}</div>
+        <div class="diffs" role="radiogroup" aria-label="Difficulté"></div>
         <div class="row"><button type="button" class="btn primary" id="startBtn">Commencer</button><button type="button" class="btn" id="startHelp">Commandes et armures</button></div>
       </div>`);
     const el = $('overlay');
-    el.querySelectorAll<HTMLButtonElement>('[data-diff]').forEach((b) =>
+    el.querySelectorAll<HTMLCanvasElement>('[data-thumb]').forEach((c) => {
+      const map = MAPS.find((m) => m.id === c.dataset.thumb)!;
+      drawMapThumbnail(c.getContext('2d')!, map, c.width);
+    });
+    const bindDiffs = (): void => {
+      const diffsEl = el.querySelector<HTMLElement>('.diffs')!;
+      diffsEl.innerHTML = this.diffsHtml(this.mapId);
+      diffsEl.querySelectorAll<HTMLButtonElement>('[data-diff]').forEach((b) =>
+        b.addEventListener('click', () => {
+          this.difficulty = b.dataset.diff as Difficulty;
+          diffsEl.querySelectorAll('[data-diff]').forEach((o) => o.setAttribute('aria-checked', String(o === b)));
+        }),
+      );
+    };
+    bindDiffs();
+    el.querySelectorAll<HTMLButtonElement>('[data-map]').forEach((b) =>
       b.addEventListener('click', () => {
-        this.difficulty = b.dataset.diff as Difficulty;
-        el.querySelectorAll('[data-diff]').forEach((o) => o.setAttribute('aria-checked', String(o === b)));
+        this.mapId = b.dataset.map!;
+        el.querySelectorAll('[data-map]').forEach((o) => o.setAttribute('aria-checked', String(o === b)));
+        bindDiffs();
       }),
     );
     $('startBtn').addEventListener('click', () => {

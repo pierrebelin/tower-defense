@@ -1,4 +1,5 @@
-import type { CreepDef, TowerDef } from '../../domain/model/types';
+import { Grid } from '../../domain/model/Grid';
+import type { CellKind, CreepDef, MapDef, TowerDef } from '../../domain/model/types';
 import { CREEP_STYLE, FAMILY_COLOR, PAL } from './palette';
 
 // Dessins vectoriels procéduraux. Le contexte est déjà mis à l'échelle :
@@ -742,6 +743,29 @@ export function drawTower(ctx: Ctx, def: TowerDef, cx: number, cy: number, aim: 
   if (def.family !== 'wall') pips(ctx, cx, cy, def.tier);
 }
 
+const CELL_COLOR: Record<CellKind, string> = {
+  build: PAL.grassA,
+  rock: PAL.rock,
+  spawn: PAL.good,
+  exit: PAL.danger,
+  road: PAL.dirt,
+  checkpoint: PAL.gold,
+};
+
+/** Vignette d'une carte : une couleur par nature de case, ratio conservé. */
+export function drawMapThumbnail(ctx: Ctx, map: MapDef, size: number): void {
+  const grid = new Grid(map);
+  const scale = size / Math.max(grid.w, grid.h);
+  const ox = (size - grid.w * scale) / 2;
+  const oy = (size - grid.h * scale) / 2;
+  for (let y = 0; y < grid.h; y++) {
+    for (let x = 0; x < grid.w; x++) {
+      ctx.fillStyle = CELL_COLOR[grid.kind[grid.idx(x, y)]];
+      ctx.fillRect(ox + x * scale, oy + y * scale, scale + 0.5, scale + 0.5);
+    }
+  }
+}
+
 export interface CreepLike {
   def: CreepDef;
   x: number;
@@ -753,6 +777,7 @@ export interface CreepLike {
   shred: number;
   hitFlash: number;
   bob: number;
+  breaker?: { phase: 'charge' | 'armed' | 'cooldown'; timer: number };
 }
 
 export function drawCreep(ctx: Ctx, c: CreepLike, dirX: number, dirY: number, time: number, showBar = true): void {
@@ -768,6 +793,14 @@ export function drawCreep(ctx: Ctx, c: CreepLike, dirX: number, dirY: number, ti
   ctx.beginPath();
   ctx.ellipse(c.x + 0.04, c.y + r * 0.55, r * (air ? 0.8 : 1), r * 0.42, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  // Aura du Sapeur gobelin en fenêtre de destruction.
+  if (c.breaker?.phase === 'armed') {
+    ctx.fillStyle = PAL.breakerAura;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 0.14 + 0.05 * Math.sin(time * 6 + c.bob), 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   if (st.shape === 'wing') {
     const flap = Math.sin(time * 12 + c.bob) * 0.35;

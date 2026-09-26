@@ -316,41 +316,50 @@ export class Renderer {
     ctx.ellipse(sp.x, sp.y, 0.5, 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pierre runique : cercle de runes qui pulse.
-    const cp = g.regionCenter(g.checkpointCells);
+    // Pierres runiques : un cercle de runes qui pulse par pierre, numéroté s'il y en a plusieurs.
     const pulse = 0.5 + 0.5 * Math.sin(t * 2);
-    ctx.fillStyle = 'rgba(30, 26, 20, 0.35)';
-    ctx.beginPath();
-    ctx.arc(cp.x, cp.y, 1.7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = `rgba(233, 185, 73, ${0.45 + 0.35 * pulse})`;
-    ctx.lineWidth = 0.08;
-    ctx.beginPath();
-    ctx.arc(cp.x, cp.y, 1.55, 0, Math.PI * 2);
-    ctx.stroke();
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2 + t * 0.2;
-      const rx = cp.x + Math.cos(a) * 1.55;
-      const ry = cp.y + Math.sin(a) * 1.55;
-      ctx.fillStyle = PAL.gold;
-      ctx.fillRect(rx - 0.07, ry - 0.12, 0.14, 0.24);
-    }
-    ctx.fillStyle = PAL.stone;
-    ctx.beginPath();
-    ctx.moveTo(cp.x - 0.35, cp.y + 0.5);
-    ctx.lineTo(cp.x - 0.25, cp.y - 0.6);
-    ctx.lineTo(cp.x + 0.25, cp.y - 0.7);
-    ctx.lineTo(cp.x + 0.35, cp.y + 0.5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = `rgba(255, 220, 120, ${0.6 + 0.4 * pulse})`;
-    ctx.lineWidth = 0.06;
-    ctx.beginPath();
-    ctx.moveTo(cp.x, cp.y - 0.4);
-    ctx.lineTo(cp.x, cp.y + 0.25);
-    ctx.moveTo(cp.x - 0.14, cp.y - 0.15);
-    ctx.lineTo(cp.x + 0.14, cp.y);
-    ctx.stroke();
+    g.checkpoints.forEach((cells, k) => {
+      const cp = g.regionCenter(cells);
+      ctx.fillStyle = 'rgba(30, 26, 20, 0.35)';
+      ctx.beginPath();
+      ctx.arc(cp.x, cp.y, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(233, 185, 73, ${0.45 + 0.35 * pulse})`;
+      ctx.lineWidth = 0.08;
+      ctx.beginPath();
+      ctx.arc(cp.x, cp.y, 1.55, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + t * 0.2;
+        const rx = cp.x + Math.cos(a) * 1.55;
+        const ry = cp.y + Math.sin(a) * 1.55;
+        ctx.fillStyle = PAL.gold;
+        ctx.fillRect(rx - 0.07, ry - 0.12, 0.14, 0.24);
+      }
+      ctx.fillStyle = PAL.stone;
+      ctx.beginPath();
+      ctx.moveTo(cp.x - 0.35, cp.y + 0.5);
+      ctx.lineTo(cp.x - 0.25, cp.y - 0.6);
+      ctx.lineTo(cp.x + 0.25, cp.y - 0.7);
+      ctx.lineTo(cp.x + 0.35, cp.y + 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255, 220, 120, ${0.6 + 0.4 * pulse})`;
+      ctx.lineWidth = 0.06;
+      ctx.beginPath();
+      ctx.moveTo(cp.x, cp.y - 0.4);
+      ctx.lineTo(cp.x, cp.y + 0.25);
+      ctx.moveTo(cp.x - 0.14, cp.y - 0.15);
+      ctx.lineTo(cp.x + 0.14, cp.y);
+      ctx.stroke();
+      if (g.checkpoints.length > 1) {
+        ctx.fillStyle = 'rgba(255, 240, 210, 0.9)';
+        ctx.font = '0.6px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(k + 1), cp.x, cp.y + 1.1);
+      }
+    });
 
     // Porte de sortie : arche de pierre et lueur rouge.
     const ex = g.regionCenter(g.exitCells);

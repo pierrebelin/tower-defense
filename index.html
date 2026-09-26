@@ -162,6 +162,12 @@
   .diff[aria-checked="true"] { border-color: var(--gold); background: #2e2615; }
   .diff strong { display: block; font: 700 22px var(--display); color: var(--text); }
   .diff span { display: block; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .maps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }
+  .map { display: grid; justify-items: center; gap: 6px; text-align: center; background: var(--slot); border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; cursor: pointer; }
+  .map:hover { border-color: var(--bronze); }
+  .map[aria-checked="true"] { border-color: var(--gold); background: #2e2615; }
+  .map-thumb { width: 64px; height: 64px; border: 1px solid var(--line-soft); border-radius: 3px; }
+  .map span { font: 500 13px var(--caps); color: var(--text-dim); letter-spacing: 0.03em; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .sheet .btn { font-size: 16px; padding: 8px 18px; }
   .endstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 14px 0 20px; }
@@ -210,6 +216,7 @@
     .sheet { padding: 18px; }
     .sheet h1 { font-size: 48px; }
     .diffs { grid-template-columns: 1fr; }
+    .maps { grid-template-columns: 1fr; }
     kbd { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }

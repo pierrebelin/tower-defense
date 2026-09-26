@@ -1,10 +1,11 @@
 import type { World } from '../model/World';
 import type { Creep } from '../model/types';
+import { creepSpeed } from '../rules/speed';
 
 export function updateMovement(world: World, dt: number): void {
   for (const c of world.creeps) {
     if (!c.alive || c.frozen > 0) continue;
-    const speed = c.def.speed * (1 - c.slowPct);
+    const speed = creepSpeed(c);
     if (c.def.air) moveAir(world, c, speed * dt);
     else moveGround(world, c, speed * dt);
   }
@@ -67,8 +68,9 @@ function moveGround(world: World, c: Creep, budget: number): void {
 
 /** Passe au tronçon suivant ; renvoie false si la créature a atteint la sortie. */
 function advanceLeg(world: World, c: Creep): boolean {
-  if (c.leg === 0) {
-    c.leg = 1;
+  const lastLeg = world.fields.length - 1;
+  if (c.leg < lastLeg) {
+    c.leg++;
     return true;
   }
   c.alive = false;

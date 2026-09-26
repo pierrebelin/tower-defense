@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { updateMovement } from '../../../src/domain/systems/movement';
 import { applyOnHit, updateStatuses } from '../../../src/domain/systems/status';
+import { hitCreep } from '../../../src/domain/systems/combat';
 import { spawnCreep } from '../../../src/domain/systems/waves';
 import { dispatch } from '../../../src/application/dispatch';
 import type { AttackDef } from '../../../src/domain/model/types';
 import { newWorld } from '../../support/helpers';
+
+const PLAIN_ATTACK: AttackDef = {
+  type: 'normal',
+  dmg: [10, 10],
+  cooldown: 1,
+  range: 1,
+  projectileSpeed: 0,
+  targets: 'ground',
+};
 
 const POISON_ATTACK: AttackDef = {
   type: 'normal',
@@ -192,5 +202,27 @@ describe('status', () => {
     updateStatuses(w, 1);
 
     expect(w.stats.towers.get(t.id)!.damage).toBe(2);
+  });
+
+  it('[RM-12] ne relance pas le sprint quand il se recharge encore 4 s après sa fin', () => {
+    const w = newWorld();
+    const c = spawnCreep(w, 'rat', 0);
+    c.def = { ...c.def, sprint: { mult: 2, duration: 1, cooldown: 4 } };
+
+    hitCreep(w, 1, 'archer', PLAIN_ATTACK, c, 0);
+    advance(w, 1);
+
+    expect(c.sprint).toBe(0);
+    expect(c.sprintCooldown).toBeCloseTo(4, 1);
+
+    hitCreep(w, 1, 'archer', PLAIN_ATTACK, c, 0);
+
+    expect(c.sprint).toBe(0);
+
+    advance(w, 4);
+
+    hitCreep(w, 1, 'archer', PLAIN_ATTACK, c, 0);
+
+    expect(c.sprint).toBe(1);
   });
 });

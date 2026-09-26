@@ -15,7 +15,7 @@ export const WAVE_GAP = 14;
 
 export function waveDuration(index: number): number {
   const w = waveAt(index);
-  return (w.count - 1) * w.interval;
+  return Math.max(...w.groups.map((g) => g.delay + (g.count - 1) * g.interval));
 }
 
 export function canLaunchNext(world: World): boolean {
@@ -28,11 +28,16 @@ export function launchWave(world: World): void {
   const w = waveAt(index);
   world.wave = index;
   world.phase = 'playing';
-  world.spawners.push({ wave: index, creep: w.creep, left: w.count, interval: w.interval, timer: 0 });
-  world.pending.set(index, w.count);
+  let pending = 0;
+  for (const g of w.groups) {
+    world.spawners.push({ wave: index, creep: g.creep, left: g.count, interval: g.interval, timer: g.delay });
+    pending += g.count;
+  }
+  world.pending.set(index, pending);
   world.stats.waves[index] = { livesLost: 0, gold: null };
   world.nextWaveIn = canLaunchNext(world) ? waveDuration(index) + WAVE_GAP : Infinity;
-  world.emit({ t: 'waveStart', wave: index, creep: w.creep, boss: !!CREEPS[w.creep].boss });
+  const first = w.groups[0];
+  world.emit({ t: 'waveStart', wave: index, creep: first.creep, boss: w.groups.some((g) => CREEPS[g.creep].boss) });
 }
 
 /** PV d'une créature à la vague `wave`, difficulté et mode infini compris. */
@@ -41,26 +46,41 @@ export function creepHp(world: World, def: CreepDef, wave: number): number {
   return Math.round(baseHp(wave) * def.hpFactor * DIFFICULTY[world.difficulty].hp * endlessMult);
 }
 
-export function spawnCreep(world: World, defId: string, wave: number): Creep {
-  const def = CREEPS[defId];
+/** Construction commune d'une créature, apparition normale ou rejeton de scission. */
+function buildCreep(world: World, def: CreepDef, wave: number, x: number, y: number, tx: number, ty: number, leg: number): Creep {
   const hp = creepHp(world, def, wave);
-  const g = world.grid;
-  const cell = g.spawnCells[world.rng.int(g.spawnCells.length)];
-  const x = g.cx(cell) + 0.5;
-  const y = g.cy(cell) + 0.5;
-  const c: Creep = {
-    id: world.id(), def, wave, x, y, hp, maxHp: hp, leg: 0,
-    tx: g.cx(cell), ty: g.cy(cell),
-    slowPct: 0, slowTimer: 0, shred: 0, shredTimer: 0, poisons: [], frozen: 0, freezeGuard: 0,
+  return {
+    id: world.id(), def, wave, x, y, hp, maxHp: hp, leg,
+    tx, ty,
+    slowPct: 0, slowTimer: 0, shred: 0, shredTimer: 0, poisons: [], frozen: 0, freezeGuard: 0, shield: def.shield ?? 0,
+    sprint: 0, sprintCooldown: 0, healTimer: def.heal?.every ?? 0,
     alive: true, remaining: Infinity, bob: world.rng.next() * Math.PI * 2, hitFlash: 0,
     bounty: bountyFor(wave, def),
+    brood: 0,
+    breaker: def.breaker ? { phase: 'charge', timer: def.breaker.charge } : undefined,
   };
+}
+
+export function spawnCreep(world: World, defId: string, wave: number): Creep {
+  const def = CREEPS[defId];
+  const g = world.grid;
+  const cell = g.spawnCells[world.rng.int(g.spawnCells.length)];
+  const c = buildCreep(world, def, wave, g.cx(cell) + 0.5, g.cy(cell) + 0.5, g.cx(cell), g.cy(cell), 0);
   if (def.air) {
     c.x = world.spawnCenter.x;
     c.y = world.spawnCenter.y;
   }
   world.creeps.push(c);
   return c;
+}
+
+/** Fait naître `count` rejetons `defId` à la position du parent, dans `world.offspring`. */
+export function spawnOffspring(world: World, parent: Creep, defId: string, count: number): void {
+  const def = CREEPS[defId];
+  for (let i = 0; i < count; i++) {
+    world.offspring.push(buildCreep(world, def, parent.wave, parent.x, parent.y, parent.tx, parent.ty, parent.leg));
+  }
+  world.pending.set(parent.wave, (world.pending.get(parent.wave) ?? 0) + count);
 }
 
 export function updateWaves(world: World, dt: number): void {

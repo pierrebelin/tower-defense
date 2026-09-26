@@ -65,6 +65,12 @@ export class Bot {
         else return;
         continue;
       }
+      // Plan épuisé : une case déjà bâtie a pu être libérée par un briseur, on la rebâtit.
+      const gap = this.plan.find(([x, y]) => w.grid.tower[w.grid.idx(x, y)] === 0);
+      if (gap && w.gold >= 3) {
+        const r = dispatch(w, { c: 'build', def: 'wall', x: gap[0], y: gap[1] });
+        if (r.ok) continue;
+      }
       // Améliorations : la tour la moins avancée d'abord.
       const up = w.towers
         .filter((t) => t.def.attack && t.def.upgrades.length)

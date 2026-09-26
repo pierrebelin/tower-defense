@@ -3,9 +3,12 @@ import type { AttackDef, Tower } from '../../src/domain/model/types';
 import { applyOnHit } from '../../src/domain/systems/status';
 import { spawnCreep } from '../../src/domain/systems/waves';
 import type { TowerDef } from '../../src/domain/model/types';
+import type { WaveBriefing } from '../../src/application/queries/waveBriefing';
+import { CREEPS } from '../../src/domain/catalog/creeps';
 import {
+  briefingChip, briefingInfo,
   creepEffects, debriefBreakers, debriefFamilies, debriefTowers, debriefWaves,
-  elementsLabel, FAMILY_LABEL, fmt0, fmt1, towerInfo, towerSpecials,
+  elementsLabel, FAMILY_LABEL, fmt0, fmt1, nextWaveInfo, towerInfo, towerSpecials,
 } from '../../src/presentation/describe';
 import { infusionBlocker } from '../../src/domain/rules/infusion';
 import { TOWERS } from '../../src/domain/catalog/towers';
@@ -161,6 +164,43 @@ describe('bilan de partie', () => {
 
     expect(html).toContain('1 tour détruite');
     expect(html).not.toContain('tours');
+  });
+});
+
+describe('aperçu de la prochaine vague', () => {
+  const mixed: WaveBriefing = {
+    wave: 4,
+    groups: [
+      { creep: CREEPS.wolf, count: 3, hp: 437, bounty: 23 },
+      { creep: CREEPS.rat, count: 2, hp: 128, bounty: 9 },
+    ],
+  };
+
+  it('[RM-03] résume chaque groupe dans la barre du haut quand la vague est mixte', () => {
+    const html = briefingChip(mixed);
+
+    expect(html).toContain('3 Loups gris');
+    expect(html).toContain('2 Rats des marais');
+  });
+
+  it('[RM-03] détaille les PV et la prime de chaque groupe au survol', () => {
+    const html = briefingInfo(mixed);
+
+    expect(html).toContain(fmt0(437));
+    expect(html).toContain('23 or');
+    expect(html).toContain(fmt0(128));
+    expect(html).toContain('9 or');
+  });
+
+  it('[RM-03] liste chaque groupe dans la fiche de la prochaine vague quand la vague est mixte', () => {
+    const html = nextWaveInfo(mixed);
+
+    expect(html).toContain(CREEPS.wolf.plural);
+    expect(html).toContain(CREEPS.rat.plural);
+    expect(html).toContain(fmt0(437));
+    expect(html).toContain(fmt0(128));
+    expect(html).toContain('23 or');
+    expect(html).toContain('9 or');
   });
 });
 

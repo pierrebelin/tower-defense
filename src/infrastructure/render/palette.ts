@@ -22,6 +22,7 @@ export const PAL = {
   danger: '#d8553f',
   good: '#8cc464',
   shadow: 'rgba(10, 8, 5, 0.35)',
+  breakerAura: 'rgba(240, 154, 74, 0.4)',
 };
 
 export const FAMILY_COLOR: Record<Family, { main: string; dark: string; glow: string }> = {
@@ -53,4 +54,11 @@ export const CREEP_STYLE: Record<string, CreepStyle> = {
   ogre: { body: '#9a643c', dark: '#5a3620', eye: '#ffd24a', shape: 'round' },
   hydra: { body: '#3f8a66', dark: '#1f4d38', eye: '#ffe36b', shape: 'round' },
   ashlord: { body: '#b9492f', dark: '#5e1f14', eye: '#ffcf6b', shape: 'block' },
+  runeguard: { body: '#5a6b8a', dark: '#2e3a52', eye: '#a0e0ff', shape: 'block' },
+  dunerunner: { body: '#d4b06a', dark: '#8a6a35', eye: '#fff2c2', shape: 'round' },
+  shaman: { body: '#c9a3d4', dark: '#7a5c85', eye: '#fff4c2', shape: 'round' },
+  slime: { body: '#5fbf60', dark: '#2e7a34', eye: '#eaffb0', shape: 'round' },
+  slimelet: { body: '#8fe08f', dark: '#4a9a4f', eye: '#eaffb0', shape: 'round' },
+  sapper: { body: '#7a8f4a', dark: '#455a26', eye: '#ffe9a0', shape: 'round' },
+  hydrahead: { body: '#4fa878', dark: '#256b46', eye: '#ffe36b', shape: 'round' },
 };
